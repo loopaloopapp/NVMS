@@ -14,6 +14,7 @@ interface ScanOption {
   excludeQueryString: boolean;
   ignorePaths: string;
   respectRobots: boolean;
+  estimatedQueries: number; // Estimated daily queries/requests
 }
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
     excludeQueryString: true,
     ignorePaths: '/api, /admin, /login, /_next',
     respectRobots: true,
+    estimatedQueries: 5000,
   });
 
   const [isScanning, setIsScanning] = useState(false);
@@ -348,6 +350,20 @@ export default function Home() {
               disabled={isScanning}
             />
           </div>
+          <div className="form-group">
+            <label>Estimated Daily Queries / Traffic</label>
+            <input 
+              type="number" 
+              className="input" 
+              value={options.estimatedQueries} 
+              onChange={(e) => setOptions({...options, estimatedQueries: Number(e.target.value)})}
+              disabled={isScanning}
+              min={1}
+            />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+              Evaluates server-side CPU performance requirements for NWSAPI optimization.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -447,6 +463,49 @@ export default function Home() {
                     💻 NWSAPI Github Repository
                   </a>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* High-Volume Traffic Optimization Opportunity */}
+          {options.estimatedQueries >= 10000 && (
+            <div style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.06)',
+              border: '1px dashed var(--accent)',
+              padding: '1.25rem',
+              borderRadius: '12px',
+              marginBottom: '1.5rem',
+              color: 'var(--text-primary)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.03)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700', color: 'var(--accent)', fontSize: '1rem' }}>
+                <Sparkles size={20} style={{ color: 'var(--accent)' }} />
+                🚀 High-Volume Server Optimization Opportunity (NWSAPI Recommendation)
+              </div>
+              <p style={{ fontSize: '0.95rem', margin: 0, lineHeight: '1.5', color: 'var(--text-secondary)' }}>
+                Your site is configured with an estimated **{options.estimatedQueries.toLocaleString()}** daily queries/requests. Under this high-traffic load, server-side CPU performance during SSR, dynamic scraping, or server-side DOM query processing is extremely critical. 
+                Using a pre-compiled, high-performance CSS selector engine like **NWSAPI** in your server-side environment (Node.js/Next.js) will dramatically decrease TTFB, minimize memory overhead, and optimize hosting compute costs compared to generic software-based query selector implementations.
+              </p>
+              <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.25rem', fontSize: '0.85rem' }}>
+                <a 
+                  href="https://www.npmjs.com/package/nwsapi" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={{ color: 'var(--accent)', textDecoration: 'underline', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                >
+                  📦 Get NWSAPI from NPM Registry
+                </a>
+                <a 
+                  href="https://github.com/dperini/nwsapi" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={{ color: 'var(--accent)', textDecoration: 'underline', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                >
+                  💻 Official NWSAPI GitHub Project
+                </a>
               </div>
             </div>
           )}
