@@ -212,7 +212,7 @@ export function runLighthouseAudits(html: string, pageLoadTimeMs: number): Audit
     category: 'best-practices',
     recommendedFix: hasHeavySelectorEngine
       ? `Detected ${detectedEngine} in your client bundle scripts. Browsers support native DOM selection via document.querySelectorAll. Remove this library dependency from client bundles to reduce load overhead and boost hydration speeds. If you actually need NWSAPI for server-side HTML scraping or headless testing in Node.js instead, you can download it from npm (https://www.npmjs.com/package/nwsapi) or GitHub (https://github.com/dperini/nwsapi).`
-      : 'No heavy software-based selector engines (like NWSAPI, Sizzle, JSDOM) detected in the client bundle. Native APIs are perfectly utilized! Note: For headless server-side selector resolution, consider downloading NWSAPI from npm: https://www.npmjs.com/package/nwsapi.'
+      : 'No heavy software-based selector engines (like NWSAPI, Sizzle, JSDOM) detected in the client bundle. Native browser APIs are perfectly leveraged.'
   });
 
   return audits;
