@@ -11,7 +11,7 @@ export interface AuditResult {
   recommendedFix?: string; // Actionable advice to improve
 }
 
-export function runLighthouseAudits(html: string, pageLoadTimeMs: number): AuditResult[] {
+export function runLighthouseAudits(html: string, pageLoadTimeMs: number, targetUrl?: string): AuditResult[] {
   const $ = cheerio.load(html);
   const audits: AuditResult[] = [];
 
@@ -213,6 +213,53 @@ export function runLighthouseAudits(html: string, pageLoadTimeMs: number): Audit
     recommendedFix: hasHeavySelectorEngine
       ? `Detected ${detectedEngine} in your client bundle scripts. Browsers support native DOM selection via document.querySelectorAll. Remove this library dependency from client bundles to reduce load overhead and boost hydration speeds. If you actually need NWSAPI for server-side HTML scraping or headless testing in Node.js instead, you can download it from npm (https://www.npmjs.com/package/nwsapi) or GitHub (https://github.com/dperini/nwsapi).`
       : 'No heavy software-based selector engines (like NWSAPI, Sizzle, JSDOM) detected in the client bundle. Native browser APIs are perfectly leveraged.'
+  });
+
+  // Audit 11: Canonical Link Tag Validation (Standard & Loop/Mismatch Check)
+  const canonicalHref = $('link[rel="canonical"]').attr('href')?.trim() || '';
+  let canonicalScore = 0;
+  let canonicalDisplay = 'Missing';
+  let canonicalFix = 'Add a <link rel="canonical" href="..."> element inside the page head to specify the preferred indexing URL to search engines.';
+
+  if (canonicalHref.length > 0) {
+    if (targetUrl) {
+      try {
+        const parsedCanonical = new URL(canonicalHref);
+        const parsedTarget = new URL(targetUrl);
+        
+        const normalizePath = (p: string) => p.endsWith('/') ? p.slice(0, -1) : p;
+        const hostMatch = parsedCanonical.hostname === parsedTarget.hostname;
+        const pathMatch = normalizePath(parsedCanonical.pathname) === normalizePath(parsedTarget.pathname);
+        
+        if (hostMatch && pathMatch) {
+          canonicalScore = 1.0;
+          canonicalDisplay = 'Perfect Match';
+          canonicalFix = 'Canonical URL is fully self-referential and matches the page destination.';
+        } else {
+          canonicalScore = 0.5;
+          canonicalDisplay = 'Mismatch Detected';
+          canonicalFix = `The canonical tag resolves to "${canonicalHref}" but the actual page URL is "${targetUrl}". Ensure this mismatch is intentional (e.g. for syndication) and is not a dynamic rendering bug, as it will prevent search engines from indexing this page in favor of the canonical target.`;
+        }
+      } catch {
+        canonicalScore = 0.3;
+        canonicalDisplay = 'Invalid URL Format';
+        canonicalFix = `The canonical tag has an invalid URL value: "${canonicalHref}". Ensure the canonical tag specifies an absolute, valid URL path (e.g. https://example.com/page).`;
+      }
+    } else {
+      canonicalScore = 1.0;
+      canonicalDisplay = 'Configured';
+      canonicalFix = 'Canonical URL is present and defined.';
+    }
+  }
+
+  audits.push({
+    id: 'canonical-validation',
+    title: 'Valid and self-matching Canonical Tag',
+    description: 'Canonical tags advise search engines which version of a page should be indexed to avoid duplicate content penalties.',
+    score: canonicalScore,
+    displayValue: canonicalDisplay,
+    category: 'seo',
+    recommendedFix: canonicalFix
   });
 
   return audits;

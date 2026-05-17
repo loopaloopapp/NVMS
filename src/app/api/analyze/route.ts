@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const severity = determineSeverityByScore(score);
 
     // Execute Lighthouse audit logic on rendered DOM
-    const audits = runLighthouseAudits(renderedHtmlRes.html, renderedHtmlRes.metrics.loadTime);
+    const audits = runLighthouseAudits(renderedHtmlRes.html, renderedHtmlRes.metrics.loadTime, initialHtmlRes.finalUrl);
     const lhScores = calculateLighthouseScores(audits);
 
     return NextResponse.json({
