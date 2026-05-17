@@ -185,6 +185,36 @@ export function runLighthouseAudits(html: string, pageLoadTimeMs: number): Audit
       : 'Add <meta charset="utf-8"> inside the head component to prevent rendering artifacts on special symbols.'
   });
 
+  // Audit 10: Client-side selector engine overhead (NWSAPI / JSDOM / Sizzle check)
+  let hasHeavySelectorEngine = false;
+  let detectedEngine = '';
+  $('script').each((i, el) => {
+    const src = $(el).attr('src') || '';
+    const content = $(el).html() || '';
+    if (src.includes('nwsapi') || content.includes('nwsapi') || content.includes('NW.Dom')) {
+      hasHeavySelectorEngine = true;
+      detectedEngine = 'NWSAPI';
+    } else if (src.includes('jsdom') || content.includes('jsdom')) {
+      hasHeavySelectorEngine = true;
+      detectedEngine = 'JSDOM';
+    } else if (src.includes('sizzle') || content.includes('sizzle') || src.includes('sizzle')) {
+      hasHeavySelectorEngine = true;
+      detectedEngine = 'Sizzle';
+    }
+  });
+
+  audits.push({
+    id: 'selector-engine',
+    title: 'Avoid client-side DOM selector libraries',
+    description: 'Modern browsers support highly optimized native CSS selectors (querySelectorAll). Do not bundle heavy selector libraries client-side.',
+    score: hasHeavySelectorEngine ? 0.4 : 1,
+    displayValue: hasHeavySelectorEngine ? `${detectedEngine} detected` : 'Native QSA used',
+    category: 'best-practices',
+    recommendedFix: hasHeavySelectorEngine
+      ? `Detected ${detectedEngine} in your client bundle scripts. Browsers support native DOM selection via document.querySelectorAll. Remove this library dependency from client bundles to reduce load overhead and boost hydration speeds.`
+      : 'No heavy software-based selector engines (like NWSAPI, Sizzle, JSDOM) detected in the client bundle. Native APIs are perfectly utilized!'
+  });
+
   return audits;
 }
 
