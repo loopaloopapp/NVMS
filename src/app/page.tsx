@@ -45,6 +45,7 @@ export default function Home() {
   const [authName, setAuthName] = useState('NextJS Developer');
   const [savedScans, setSavedScans] = useState<any[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [activeCategoryTab, setActiveCategoryTab] = useState<'performance' | 'accessibility' | 'best-practices' | 'seo'>('performance');
 
   // Load theme, user session and saved scans on mount
   React.useEffect(() => {
@@ -1642,60 +1643,231 @@ export default function Home() {
               <div>
                 {/* Circular Gauges */}
                 <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1.25rem' }}>Lighthouse PageSpeed Categories</h4>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', marginTop: '-0.75rem' }}>
+                  Tap on any category gauge below to inspect its audits and action recommendations.
+                </p>
                 {selectedResult.lighthouse ? (
-                  <div className="score-circles-container">
-                    <div className="score-circle-wrapper">
-                      <div 
-                        className="score-circle" 
-                        style={{ 
-                          '--score-color': getScoreColor(selectedResult.lighthouse.scores.performance),
-                          '--score-val': selectedResult.lighthouse.scores.performance 
-                        } as any}
-                      >
-                        <span className="score-circle-value">{selectedResult.lighthouse.scores.performance}</span>
-                      </div>
-                      <span className="score-circle-label">Performance</span>
-                    </div>
+                  (() => {
+                    const categoryAudits = selectedResult.lighthouse.audits?.filter((a: any) => a.category === activeCategoryTab) || [];
+                    return (
+                      <>
+                        <div className="score-circles-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                          <div 
+                            className="score-circle-wrapper"
+                            onClick={() => setActiveCategoryTab('performance')}
+                            style={{ 
+                              cursor: 'pointer',
+                              transform: activeCategoryTab === 'performance' ? 'scale(1.06)' : 'scale(1)',
+                              transition: 'all 0.25s ease',
+                              padding: '0.5rem',
+                              borderRadius: '16px',
+                              backgroundColor: activeCategoryTab === 'performance' ? 'var(--bg-tertiary)' : 'transparent',
+                              border: activeCategoryTab === 'performance' ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                              boxShadow: activeCategoryTab === 'performance' ? 'var(--shadow-2)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            <div 
+                              className="score-circle" 
+                              style={{ 
+                                '--score-color': getScoreColor(selectedResult.lighthouse.scores.performance),
+                                '--score-val': selectedResult.lighthouse.scores.performance 
+                              } as any}
+                            >
+                              <span className="score-circle-value">{selectedResult.lighthouse.scores.performance}</span>
+                            </div>
+                            <span className="score-circle-label" style={{ fontWeight: activeCategoryTab === 'performance' ? 700 : 500, color: activeCategoryTab === 'performance' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Performance</span>
+                          </div>
 
-                    <div className="score-circle-wrapper">
-                      <div 
-                        className="score-circle" 
-                        style={{ 
-                          '--score-color': getScoreColor(selectedResult.lighthouse.scores.accessibility),
-                          '--score-val': selectedResult.lighthouse.scores.accessibility 
-                        } as any}
-                      >
-                        <span className="score-circle-value">{selectedResult.lighthouse.scores.accessibility}</span>
-                      </div>
-                      <span className="score-circle-label">Accessibility</span>
-                    </div>
+                          <div 
+                            className="score-circle-wrapper"
+                            onClick={() => setActiveCategoryTab('accessibility')}
+                            style={{ 
+                              cursor: 'pointer',
+                              transform: activeCategoryTab === 'accessibility' ? 'scale(1.06)' : 'scale(1)',
+                              transition: 'all 0.25s ease',
+                              padding: '0.5rem',
+                              borderRadius: '16px',
+                              backgroundColor: activeCategoryTab === 'accessibility' ? 'var(--bg-tertiary)' : 'transparent',
+                              border: activeCategoryTab === 'accessibility' ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                              boxShadow: activeCategoryTab === 'accessibility' ? 'var(--shadow-2)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            <div 
+                              className="score-circle" 
+                              style={{ 
+                                '--score-color': getScoreColor(selectedResult.lighthouse.scores.accessibility),
+                                '--score-val': selectedResult.lighthouse.scores.accessibility 
+                              } as any}
+                            >
+                              <span className="score-circle-value">{selectedResult.lighthouse.scores.accessibility}</span>
+                            </div>
+                            <span className="score-circle-label" style={{ fontWeight: activeCategoryTab === 'accessibility' ? 700 : 500, color: activeCategoryTab === 'accessibility' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Accessibility</span>
+                          </div>
 
-                    <div className="score-circle-wrapper">
-                      <div 
-                        className="score-circle" 
-                        style={{ 
-                          '--score-color': getScoreColor(selectedResult.lighthouse.scores.bestPractices),
-                          '--score-val': selectedResult.lighthouse.scores.bestPractices 
-                        } as any}
-                      >
-                        <span className="score-circle-value">{selectedResult.lighthouse.scores.bestPractices}</span>
-                      </div>
-                      <span className="score-circle-label">Best Practices</span>
-                    </div>
+                          <div 
+                            className="score-circle-wrapper"
+                            onClick={() => setActiveCategoryTab('best-practices')}
+                            style={{ 
+                              cursor: 'pointer',
+                              transform: activeCategoryTab === 'best-practices' ? 'scale(1.06)' : 'scale(1)',
+                              transition: 'all 0.25s ease',
+                              padding: '0.5rem',
+                              borderRadius: '16px',
+                              backgroundColor: activeCategoryTab === 'best-practices' ? 'var(--bg-tertiary)' : 'transparent',
+                              border: activeCategoryTab === 'best-practices' ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                              boxShadow: activeCategoryTab === 'best-practices' ? 'var(--shadow-2)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            <div 
+                              className="score-circle" 
+                              style={{ 
+                                '--score-color': getScoreColor(selectedResult.lighthouse.scores.bestPractices),
+                                '--score-val': selectedResult.lighthouse.scores.bestPractices 
+                              } as any}
+                            >
+                              <span className="score-circle-value">{selectedResult.lighthouse.scores.bestPractices}</span>
+                            </div>
+                            <span className="score-circle-label" style={{ fontWeight: activeCategoryTab === 'best-practices' ? 700 : 500, color: activeCategoryTab === 'best-practices' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>Best Practices</span>
+                          </div>
 
-                    <div className="score-circle-wrapper">
-                      <div 
-                        className="score-circle" 
-                        style={{ 
-                          '--score-color': getScoreColor(selectedResult.lighthouse.scores.seo),
-                          '--score-val': selectedResult.lighthouse.scores.seo 
-                        } as any}
-                      >
-                        <span className="score-circle-value">{selectedResult.lighthouse.scores.seo}</span>
-                      </div>
-                      <span className="score-circle-label">SEO Suite</span>
-                    </div>
-                  </div>
+                          <div 
+                            className="score-circle-wrapper"
+                            onClick={() => setActiveCategoryTab('seo')}
+                            style={{ 
+                              cursor: 'pointer',
+                              transform: activeCategoryTab === 'seo' ? 'scale(1.06)' : 'scale(1)',
+                              transition: 'all 0.25s ease',
+                              padding: '0.5rem',
+                              borderRadius: '16px',
+                              backgroundColor: activeCategoryTab === 'seo' ? 'var(--bg-tertiary)' : 'transparent',
+                              border: activeCategoryTab === 'seo' ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                              boxShadow: activeCategoryTab === 'seo' ? 'var(--shadow-2)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            <div 
+                              className="score-circle" 
+                              style={{ 
+                                '--score-color': getScoreColor(selectedResult.lighthouse.scores.seo),
+                                '--score-val': selectedResult.lighthouse.scores.seo 
+                              } as any}
+                            >
+                              <span className="score-circle-value">{selectedResult.lighthouse.scores.seo}</span>
+                            </div>
+                            <span className="score-circle-label" style={{ fontWeight: activeCategoryTab === 'seo' ? 700 : 500, color: activeCategoryTab === 'seo' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>SEO Suite</span>
+                          </div>
+                        </div>
+
+                        {/* 🔧 Category Audits & Recommendations */}
+                        <div style={{ marginTop: '1.75rem', marginBottom: '1.75rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                            <h4 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', letterSpacing: '0.05em' }}>
+                              <Sparkles size={14} style={{ color: 'var(--accent)' }} />
+                              {activeCategoryTab.replace('-', ' ')} Insights
+                            </h4>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
+                              {categoryAudits.length} check{categoryAudits.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+
+                          {categoryAudits.length === 0 ? (
+                            <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.8rem' }}>
+                              No diagnostics found for this category.
+                            </p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              {categoryAudits.map((audit: any, aIdx: number) => {
+                                const isPass = audit.score >= 0.9;
+                                const isWarn = audit.score >= 0.5 && audit.score < 0.9;
+                                const scoreColor = isPass ? 'var(--success)' : isWarn ? 'var(--warning)' : 'var(--danger)';
+
+                                return (
+                                  <div 
+                                    key={aIdx} 
+                                    style={{ 
+                                      backgroundColor: 'var(--bg-secondary)', 
+                                      border: `1px solid var(--border)`, 
+                                      borderLeft: `4px solid ${scoreColor}`,
+                                      borderRadius: '12px', 
+                                      padding: '0.85rem 1rem', 
+                                      display: 'flex', 
+                                      flexDirection: 'column', 
+                                      gap: '0.6rem',
+                                      boxShadow: 'var(--shadow-1)'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div style={{ 
+                                          width: '10px', 
+                                          height: '10px', 
+                                          borderRadius: '50%', 
+                                          backgroundColor: scoreColor,
+                                          flexShrink: 0
+                                        }} />
+                                        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{audit.title}</span>
+                                      </div>
+                                      <span style={{ 
+                                        fontSize: '0.75rem', 
+                                        fontWeight: 800, 
+                                        padding: '0.15rem 0.5rem', 
+                                        borderRadius: '9999px', 
+                                        backgroundColor: `rgba(${isPass ? '46, 125, 50' : isWarn ? '217, 119, 6' : '185, 28, 28'}, 0.08)`, 
+                                        color: scoreColor,
+                                        border: `1px solid ${scoreColor}`
+                                      }}>
+                                        {audit.displayValue || (isPass ? 'Passed' : 'Failed')}
+                                      </span>
+                                    </div>
+
+                                    <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: '1.4', margin: 0 }}>
+                                      {audit.description}
+                                    </p>
+
+                                    {/* 🔧 Suggestion Box */}
+                                    <div style={{ 
+                                      backgroundColor: 'var(--bg-tertiary)', 
+                                      border: '1px solid var(--border)', 
+                                      padding: '0.6rem 0.85rem', 
+                                      borderRadius: '10px', 
+                                      fontSize: '0.775rem', 
+                                      color: 'var(--text-primary)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '0.2rem'
+                                    }}>
+                                      <strong style={{ color: isPass ? 'var(--success)' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <Info size={12} />
+                                        {isPass ? 'Optimal Setup' : 'How to Improve'}
+                                      </strong>
+                                      <span style={{ lineHeight: '1.35', color: 'var(--text-secondary)' }}>
+                                        {audit.recommendedFix}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()
                 ) : (
                   <p>Lighthouse data unavailable.</p>
                 )}
