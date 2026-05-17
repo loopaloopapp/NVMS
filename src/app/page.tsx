@@ -36,12 +36,92 @@ export default function Home() {
   const [selectedResult, setSelectedResult] = useState<any | null>(null);
   const [referrals, setReferrals] = useState<Record<string, string>>({});
   
+  // Authentication & Saved Scans States
+  const [user, setUser] = useState<any | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authEmail, setAuthEmail] = useState('developer@gmail.com');
+  const [authName, setAuthName] = useState('NextJS Developer');
+  const [savedScans, setSavedScans] = useState<any[]>([]);
+
+  // Load user session and saved scans on mount
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem('nvms_active_user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        const scans = localStorage.getItem(`nvms_user_scans_${parsedUser.email}`);
+        if (scans) {
+          setSavedScans(JSON.parse(scans));
+        }
+      } catch {}
+    }
+  }, []);
+
   // Audits Accordion State
   const [openAudits, setOpenAudits] = useState<Record<string, boolean>>({});
 
   // Tabs inside Drawer
   const [drawerTab, setDrawerTab] = useState<'seo-diff' | 'pagespeed' | 'audits'>('seo-diff');
 
+
+  // Auth Functions
+  const handleLogin = (email: string, name: string) => {
+    const newUser = { email, name, avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${name}` };
+    setUser(newUser);
+    localStorage.setItem('nvms_active_user', JSON.stringify(newUser));
+    setShowAuthModal(false);
+    
+    // Load scans for this user
+    const scans = localStorage.getItem(`nvms_user_scans_${email}`);
+    if (scans) {
+      setSavedScans(JSON.parse(scans));
+    } else {
+      setSavedScans([]);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setSavedScans([]);
+    localStorage.removeItem('nvms_active_user');
+  };
+
+  const saveScanReport = (scanResults: any[], startUrl: string) => {
+    const newScan = {
+      id: Date.now().toString(),
+      url: startUrl,
+      date: new Date().toLocaleString(),
+      results: scanResults,
+      referralsMap: referrals
+    };
+    setSavedScans(prev => {
+      const updated = [newScan, ...prev];
+      if (user) {
+        localStorage.setItem(`nvms_user_scans_${user.email}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const deleteSavedScan = (id: string) => {
+    setSavedScans(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      if (user) {
+        localStorage.setItem(`nvms_user_scans_${user.email}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const loadSavedScan = (scan: any) => {
+    setResults(scan.results);
+    setUrlInput(scan.url);
+    if (scan.referralsMap) {
+      setReferrals(scan.referralsMap);
+    }
+    setStatusMessage(`Loaded cached audit from ${scan.date}`);
+  };
 
   const startRealScan = async () => {
     if (!urlInput) return;
@@ -70,6 +150,7 @@ export default function Home() {
       if (currentQueue.length === 0 || count >= limit) {
         setIsScanning(false);
         setStatusMessage(`Scan complete! Analysed ${count} pages with full Core Web Vitals.`);
+        saveScanReport(finalResults, resolvedStartUrl);
         return;
       }
 
@@ -298,6 +379,64 @@ export default function Home() {
           <h1>NVMS - Next.js Metadata Visibility Scanner</h1>
           <p>Dual-Phase SEO Visibility Auditor & simulated Insights performance suite.</p>
         </div>
+        <div>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'var(--bg-secondary)', padding: '0.4rem 0.85rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <img 
+                src={user.avatarUrl} 
+                alt={user.name} 
+                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--accent)' }} 
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user.name}</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{user.email}</span>
+              </div>
+              <button 
+                onClick={handleLogout}
+                style={{ 
+                  marginLeft: '0.5rem',
+                  padding: '0.25rem 0.6rem', 
+                  fontSize: '0.75rem', 
+                  fontWeight: 700, 
+                  backgroundColor: 'transparent', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: '6px', 
+                  color: 'var(--danger)', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s' 
+                }}
+              >
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowAuthModal(true)}
+              className="btn"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                padding: '0.5rem 1rem', 
+                borderRadius: '10px', 
+                fontWeight: 700, 
+                fontSize: '0.85rem',
+                backgroundColor: '#ffffff',
+                color: '#1f2937',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+              Sign in with Google
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Settings Form */}
@@ -399,6 +538,99 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* 📁 User Saved Audits History (Only for Logged-In Users) */}
+      {user && (
+        <div className="card" style={{ marginTop: '1.5rem', borderLeft: '4px solid var(--accent)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <FileText size={18} style={{ color: 'var(--accent)' }} />
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Saved Audits Index ({user.name})</h2>
+          </div>
+          
+          {savedScans.length === 0 ? (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+              No saved scans found. Run a new audit above and it will be archived automatically under your Google Workspace.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+              {savedScans.map((scan) => (
+                <div 
+                  key={scan.id} 
+                  style={{ 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '10px', 
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    transition: 'border-color 0.2s',
+                    position: 'relative'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ 
+                        fontSize: '0.85rem', 
+                        fontFamily: 'monospace', 
+                        fontWeight: 700, 
+                        color: 'var(--text-primary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '75%'
+                      }}>
+                        {scan.url}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-primary)', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                        {scan.results?.length || 0} pages
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                      Crawled: {scan.date}
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <button 
+                      onClick={() => loadSavedScan(scan)}
+                      className="btn" 
+                      style={{ 
+                        flex: 1, 
+                        padding: '0.4rem 0.75rem', 
+                        fontSize: '0.8rem', 
+                        fontWeight: 700, 
+                        borderRadius: '6px', 
+                        border: 'none', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      Restore Report
+                    </button>
+                    <button 
+                      onClick={() => deleteSavedScan(scan.id)}
+                      style={{ 
+                        padding: '0.4rem 0.75rem', 
+                        fontSize: '0.8rem', 
+                        fontWeight: 700, 
+                        borderRadius: '6px', 
+                        border: '1px solid var(--border)', 
+                        backgroundColor: 'transparent',
+                        color: 'var(--danger)',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Progress */}
       {isScanning && (
@@ -1114,6 +1346,97 @@ export default function Home() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* 🔐 Google OAuth Login Modal Simulation */}
+      {showAuthModal && (
+        <div className="drawer-backdrop" onClick={() => setShowAuthModal(false)}>
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{ 
+              backgroundColor: 'var(--bg-primary)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '16px', 
+              padding: '2.5rem', 
+              width: '100%', 
+              maxWidth: '420px', 
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              position: 'relative'
+            }}
+          >
+            {/* Google Logo Brand Icon */}
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+            </div>
+
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Sign in to NVMS</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+              to continue to your Technical SEO & simulated Core Web Vitals Auditor dashboard.
+            </p>
+
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="form-group" style={{ textAlign: 'left' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Google Email Address</label>
+                <input 
+                  type="email" 
+                  className="input" 
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div className="form-group" style={{ textAlign: 'left' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Profile Display Name</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', width: '100%', gap: '0.75rem' }}>
+              <button 
+                onClick={() => handleLogin(authEmail, authName)}
+                className="btn"
+                style={{ flex: 1, height: '44px', fontWeight: 700 }}
+              >
+                Sign In Securely
+              </button>
+              <button 
+                onClick={() => setShowAuthModal(false)}
+                style={{ 
+                  flex: 1, 
+                  height: '44px', 
+                  backgroundColor: 'var(--bg-tertiary)', 
+                  color: 'var(--text-secondary)', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>
+              🔒 Secured by Google OAuth Sandbox simulation protocols.
+            </span>
           </div>
         </div>
       )}
