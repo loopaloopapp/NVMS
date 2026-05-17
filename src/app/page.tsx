@@ -43,16 +43,21 @@ export default function Home() {
   const [authName, setAuthName] = useState('NextJS Developer');
   const [savedScans, setSavedScans] = useState<any[]>([]);
 
-  // Load user session and saved scans on mount
+  // Load user session and saved scans on mount with brand migration logic
   React.useEffect(() => {
-    const savedUser = localStorage.getItem('nvms_active_user');
+    const savedUser = localStorage.getItem('hydraseo_active_user') || localStorage.getItem('nvms_active_user');
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
-        const scans = localStorage.getItem(`nvms_user_scans_${parsedUser.email}`);
+        const scans = localStorage.getItem(`hydraseo_user_scans_${parsedUser.email}`) || localStorage.getItem(`nvms_user_scans_${parsedUser.email}`);
         if (scans) {
-          setSavedScans(JSON.parse(scans));
+          const parsedScans = JSON.parse(scans);
+          setSavedScans(parsedScans);
+          
+          // Perform dynamic brand migration on active browser
+          localStorage.setItem('hydraseo_active_user', savedUser);
+          localStorage.setItem(`hydraseo_user_scans_${parsedUser.email}`, scans);
         }
       } catch {}
     }
@@ -69,11 +74,11 @@ export default function Home() {
   const handleLogin = (email: string, name: string) => {
     const newUser = { email, name, avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${name}` };
     setUser(newUser);
-    localStorage.setItem('nvms_active_user', JSON.stringify(newUser));
+    localStorage.setItem('hydraseo_active_user', JSON.stringify(newUser));
     setShowAuthModal(false);
     
-    // Load scans for this user
-    const scans = localStorage.getItem(`nvms_user_scans_${email}`);
+    // Load scans for this user with legacy fallback
+    const scans = localStorage.getItem(`hydraseo_user_scans_${email}`) || localStorage.getItem(`nvms_user_scans_${email}`);
     if (scans) {
       setSavedScans(JSON.parse(scans));
     } else {
@@ -84,6 +89,7 @@ export default function Home() {
   const handleLogout = () => {
     setUser(null);
     setSavedScans([]);
+    localStorage.removeItem('hydraseo_active_user');
     localStorage.removeItem('nvms_active_user');
   };
 
@@ -98,7 +104,7 @@ export default function Home() {
     setSavedScans(prev => {
       const updated = [newScan, ...prev];
       if (user) {
-        localStorage.setItem(`nvms_user_scans_${user.email}`, JSON.stringify(updated));
+        localStorage.setItem(`hydraseo_user_scans_${user.email}`, JSON.stringify(updated));
       }
       return updated;
     });
@@ -108,7 +114,7 @@ export default function Home() {
     setSavedScans(prev => {
       const updated = prev.filter(s => s.id !== id);
       if (user) {
-        localStorage.setItem(`nvms_user_scans_${user.email}`, JSON.stringify(updated));
+        localStorage.setItem(`hydraseo_user_scans_${user.email}`, JSON.stringify(updated));
       }
       return updated;
     });
@@ -294,7 +300,7 @@ export default function Home() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `nvms_report_${new Date().toISOString().slice(0,10)}.json`);
+    downloadAnchor.setAttribute("download", `hydraseo_report_${new Date().toISOString().slice(0,10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -311,7 +317,7 @@ export default function Home() {
     const encodedUri = encodeURI(csvContent);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", encodedUri);
-    downloadAnchor.setAttribute("download", `nvms_report_${new Date().toISOString().slice(0,10)}.csv`);
+    downloadAnchor.setAttribute("download", `hydraseo_report_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -376,7 +382,7 @@ export default function Home() {
       {/* Header */}
       <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1>NVMS - Next.js Metadata Visibility Scanner</h1>
+          <h1>HydraSEO - Next.js Metadata Visibility Scanner</h1>
           <p>Dual-Phase SEO Visibility Auditor & simulated Insights performance suite.</p>
         </div>
         <div>
@@ -1380,7 +1386,7 @@ export default function Home() {
               </svg>
             </div>
 
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Sign in to NVMS</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Sign in to HydraSEO</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
               to continue to your Technical SEO & simulated Core Web Vitals Auditor dashboard.
             </p>

@@ -1,13 +1,13 @@
-# 🚀 NVMS - Next.js Metadata Visibility Scanner
+# 🚀 HydraSEO - Next.js Metadata Visibility Scanner
 ### *Dual-Phase SEO Visibility Auditor & simulated Insights performance suite.*
 
 🌐 **Live Production Link**: [https://nvms-v8ec.onrender.com](https://nvms-v8ec.onrender.com)
 
-**NVMS** is a professional, high-performance technical SEO auditing platform built with **Next.js**. Its core mission is to crawl, identify, and report pages in any Next.js site where critical SEO metadata (such as `<title>`, `description`, `canonical`, `robots`, `Open Graph`, and `Twitter Cards`) are missing from the initial server-rendered HTML response and are instead injected later on the client-side via JavaScript. 
+**HydraSEO** is a professional, high-performance technical SEO auditing platform built with **Next.js**. Its core mission is to crawl, identify, and report pages in any Next.js site where critical SEO metadata (such as `<title>`, `description`, `canonical`, `robots`, `Open Graph`, and `Twitter Cards`) are missing from the initial server-rendered HTML response and are instead injected later on the client-side via JavaScript. 
 
 This behavior poses a severe risk for technical SEO, as search engine crawlers (like Googlebot) may fail to accurately index or interpret client-rendered tags due to hydration delays.
 
-Additionally, **NVMS** integrates a robust, simulated Insights-inspired diagnostic suite that measures real-time browser performance metrics (Core Web Vitals) and performs accessibility and best practices checks.
+Additionally, **HydraSEO** integrates a robust, simulated Insights-inspired diagnostic suite that measures real-time browser performance metrics (Core Web Vitals) and performs accessibility and best practices checks.
 
 ---
 
@@ -76,7 +76,7 @@ The dashboard provides a powerful, professional configuration suite under **Audi
 *   **How to Use**: Input paths you wish to skip (such as backend API endpoints, administrative dashboards, authentication routes, or Next.js internal folders) to optimize scan execution speed and prevent scanning secure/non-public sections of the site.
 
 #### 5. 🚀 Estimated Daily Queries / Traffic
-*   **Utility**: Instructs NVMS's architectural diagnostics engine about the daily query and request volume handled by the audited server.
+*   **Utility**: Instructs HydraSEO's architectural diagnostics engine about the daily query and request volume handled by the audited server.
 *   **How to Use**: Input your site's average daily page views or server queries. If set to a high-volume threshold (**10,000+ daily queries**), the dashboard automatically triggers custom, real-time performance optimization recommendations. It evaluates server-side CPU limits and advises on the adoption of high-speed pre-compiled DOM query engines like **NWSAPI** to reduce Time to First Byte (TTFB) and compute costs.
 
 ---
