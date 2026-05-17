@@ -674,6 +674,43 @@ export default function Home() {
         </div>
       </div>
 
+      {/* 🌟 Guest CTA - Create New Account Option */}
+      {!user && (
+        <div className="card" style={{ marginTop: '1.5rem', borderLeft: '4px solid var(--success)', backgroundColor: 'rgba(122, 194, 112, 0.03)' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
+            <Sparkles size={20} style={{ color: 'var(--success)' }} />
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>Unlock Personalized Cloud Archiving</h2>
+          </div>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+            Sign up for a free HydraSEO account using Google Secure Auth. You will unlock cloud-saved audits, SEO risk change tracking over time, and side-by-side Staging vs Production comparison features.
+          </p>
+          <button 
+            onClick={() => {
+              setAuthStep('credentials');
+              setShowAuthModal(true);
+            }}
+            className="btn"
+            style={{ 
+              backgroundColor: 'var(--success)', 
+              color: '#0a0e15',
+              padding: '0.6rem 1.5rem', 
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              borderRadius: '9999px',
+              border: 'none',
+              boxShadow: 'none',
+              textTransform: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              cursor: 'pointer'
+            }}
+          >
+            Create New Account (Google Sign Up)
+          </button>
+        </div>
+      )}
+
       {/* User Saved Audits History (Only for Logged-In Users) */}
       {user && (
         <>
@@ -1195,6 +1232,7 @@ export default function Home() {
                     <th>Status</th>
                     <th>Render Architecture</th>
                     <th>PageSpeed Core Score</th>
+                    <th>Load Speed</th>
                     <th>SEO Severity Status</th>
                     <th>Inspect Details</th>
                   </tr>
@@ -1229,6 +1267,16 @@ export default function Home() {
                               {r.lighthouse.scores.performance}/100
                             </span>
                           </div>
+                        ) : 'Pending'}
+                      </td>
+                      <td>
+                        {r.performanceMetrics ? (
+                          <span style={{ 
+                            fontWeight: 700, 
+                            color: r.performanceMetrics.loadTime < 1500 ? 'var(--success)' : r.performanceMetrics.loadTime < 3000 ? 'var(--warning)' : 'var(--danger)' 
+                          }}>
+                            {(r.performanceMetrics.loadTime / 1000).toFixed(2)}s
+                          </span>
                         ) : 'Pending'}
                       </td>
                       <td>
