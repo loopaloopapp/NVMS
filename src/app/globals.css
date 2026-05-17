@@ -14,6 +14,7 @@
   --accent-hover: #4dc3ff; 
   --accent-container: rgba(31, 164, 232, 0.12); 
   --on-accent-container: #7dd3fc; 
+  --on-accent: #0a0e15; /* Dark text on light background */
   
   --border: rgba(31, 164, 232, 0.15); /* Tinted subtle borders */
   
@@ -31,6 +32,40 @@
   --shadow-3: 0 10px 20px rgba(0,0,0,0.45), 0 6px 12px rgba(0,0,0,0.5);
   --shadow-4: 0 14px 28px rgba(0,0,0,0.55), 0 10px 10px rgba(0,0,0,0.55);
   --shadow-5: 0 20px 40px rgba(0,0,0,0.65), 0 12px 24px rgba(0,0,0,0.6);
+}
+
+[data-theme="light"] {
+  /* Material Design 3 (MD3) Light Theme System Tokens - Styled with HydraSEO Logo Colors */
+  --bg-primary: #f8fafc; /* Clean Light Slate canvas */
+  --bg-secondary: #ffffff; /* Pure White card surfaces */
+  --bg-tertiary: #f1f5f9; /* Light Silver elevated elements */
+  --bg-container-high: #e2e8f0; /* Silver boundary borders */
+  
+  --text-primary: #0f172a; /* Rich slate obsidian - super high contrast! */
+  --text-secondary: #334155; /* Cool charcoal text */
+  --text-tertiary: #64748b; /* Cool outline grey */
+  
+  /* Primary Accent: Logo Sky Blue tailored for light-mode AA contrast */
+  --accent: #1373a5; 
+  --accent-hover: #0e5b84; 
+  --accent-container: rgba(31, 164, 232, 0.08); 
+  --on-accent-container: #0369a1; 
+  --on-accent: #ffffff; /* White text on deeper blue background */
+  
+  --border: rgba(31, 164, 232, 0.18); /* Crisp tinted boundaries */
+  
+  /* Success Accent: Logo Apple Green tailored for light-mode AA contrast */
+  --success: #2e7d32; 
+  
+  --warning: #b45309; /* Deep amber */
+  --danger: #c2410c; /* Deep warning red */
+  
+  /* Light theme dynamic shadows */
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-2: 0 4px 6px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.12);
+  --shadow-3: 0 10px 20px rgba(0,0,0,0.12), 0 6px 6px rgba(0,0,0,0.1);
+  --shadow-4: 0 14px 28px rgba(0,0,0,0.15), 0 10px 10px rgba(0,0,0,0.12);
+  --shadow-5: 0 20px 40px rgba(0,0,0,0.18), 0 12px 24px rgba(0,0,0,0.15);
 }
 
 * {
@@ -190,7 +225,7 @@ button, input, select {
   justify-content: center;
   padding: 0.85rem 2rem;
   background-color: var(--accent);
-  color: #0a0e15; /* Dark obsidian text for light pill background */
+  color: var(--on-accent);
   border: none;
   border-radius: 9999px; /* Absolute MD3 Pill Shape */
   font-weight: 700;

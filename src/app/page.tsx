@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { 
   Play, Square, AlertCircle, AlertTriangle, CheckCircle, Info, 
   ChevronRight, Download, Filter, HelpCircle, FileText, Check, ShieldAlert, ShieldCheck,
-  Server, Laptop, Sparkles, ArrowRight, Gauge, Activity, Compass, Settings, ChevronDown, ChevronUp, Network, CornerDownRight, GitCompare
+  Server, Laptop, Sparkles, ArrowRight, Gauge, Activity, Compass, Settings, ChevronDown, ChevronUp, Network, CornerDownRight, GitCompare,
+  Sun, Moon
 } from 'lucide-react';
 
 
@@ -43,9 +44,19 @@ export default function Home() {
   const [authEmail, setAuthEmail] = useState('developer@gmail.com');
   const [authName, setAuthName] = useState('NextJS Developer');
   const [savedScans, setSavedScans] = useState<any[]>([]);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  // Load user session and saved scans on mount with brand migration logic
+  // Load theme, user session and saved scans on mount
   React.useEffect(() => {
+    // 🌓 Initialize Theme
+    const savedTheme = localStorage.getItem('hydraseo_theme') as 'light' | 'dark';
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+
     const savedUser = localStorage.getItem('hydraseo_active_user') || localStorage.getItem('nvms_active_user');
     if (savedUser) {
       try {
@@ -105,6 +116,13 @@ export default function Home() {
     setSavedScans([]);
     localStorage.removeItem('hydraseo_active_user');
     localStorage.removeItem('nvms_active_user');
+  };
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('hydraseo_theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
   };
 
   const saveScanReport = (scanResults: any[], startUrl: string) => {
@@ -473,7 +491,28 @@ export default function Home() {
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>Empowering engineering teams with high-speed SSR diagnostics, hydration mismatch audits, and cross-environment comparative insights.</p>
           </div>
         </div>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* 🌓 Theme Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              transition: 'all 0.25s',
+              boxShadow: 'var(--shadow-1)'
+            }}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun size={18} style={{ color: 'var(--accent)' }} /> : <Moon size={18} style={{ color: 'var(--accent)' }} />}
+          </button>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'var(--bg-secondary)', padding: '0.4rem 0.85rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <img 
@@ -1348,9 +1387,20 @@ export default function Home() {
                 </span>
               </div>
               <button 
-                className="btn" 
+                className="btn btn-secondary" 
                 onClick={() => setSelectedResult(null)} 
-                style={{ padding: '0.35rem 0.75rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                style={{ 
+                  padding: '0.4rem 1.25rem', 
+                  backgroundColor: 'transparent', 
+                  border: '1.5px solid var(--accent)', 
+                  color: 'var(--accent)', 
+                  borderRadius: '9999px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  cursor: 'pointer'
+                }}
               >
                 Close Audit
               </button>
