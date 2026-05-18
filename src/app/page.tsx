@@ -6,7 +6,7 @@ import {
   Play, Square, AlertCircle, AlertTriangle, CheckCircle, Info, 
   ChevronRight, Download, Filter, HelpCircle, FileText, Check, ShieldAlert, ShieldCheck,
   Server, Laptop, Sparkles, ArrowRight, Gauge, Activity, Compass, Settings, ChevronDown, ChevronUp, Network, CornerDownRight, GitCompare,
-  Sun, Moon, X, Brain, Wrench
+  Sun, Moon, X, Brain, Wrench, ExternalLink
 } from 'lucide-react';
 
 
@@ -39,6 +39,19 @@ export default function Home() {
   const [selectedResult, setSelectedResult] = useState<any | null>(null);
   const [referrals, setReferrals] = useState<Record<string, string>>({});
   
+  // 🧠 AI Presence & Brand Search Optimization (AIO) States
+  const [scanMode, setScanMode] = useState<'seo' | 'aio'>('seo');
+  const [brandName, setBrandName] = useState('');
+  const [brandIndustry, setBrandIndustry] = useState('');
+  const [brandCompetitors, setBrandCompetitors] = useState('');
+  const [selectedAioEngines, setSelectedAioEngines] = useState<string[]>(['chatgpt', 'gemini', 'claude', 'perplexity', 'copilot']);
+  const [brandUrl, setBrandUrl] = useState('');
+  const [isScanningAio, setIsScanningAio] = useState(false);
+  const [aioProgress, setAioProgress] = useState(0);
+  const [aioStatusMessage, setAioStatusMessage] = useState('');
+  const [aioResults, setAioResults] = useState<any | null>(null);
+  const [selectedAioPromptId, setSelectedAioPromptId] = useState<string | null>(null);
+
   // Authentication & Saved Scans States
   const [user, setUser] = useState<any | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -321,6 +334,117 @@ export default function Home() {
       deleted,
       regressions
     });
+  };
+
+  const startAioScan = async () => {
+    if (!brandName || !brandIndustry) return;
+
+    // 🕵️ Anti-Abuse & Monetization Checks
+    const fp = hardwareFingerprint || getDeviceFingerprint();
+    const isPro = userPlan !== 'Free Tier';
+    const currentLimit = userPlan === 'Ultimate (Infinite)' ? Infinity : 
+                         userPlan === 'Pro (100 Scans)' ? 100 : 
+                         userPlan === 'Pro (500 Scans)' ? 500 : 
+                         userPlan === 'Pro (1000 Scans)' ? 1000 : 
+                         1; // free tier limited to a single scan
+
+    if (globalScanCount >= currentLimit) {
+      if (userPlan === 'Free Tier') {
+        setAbuseBlockMessage(`You have reached the free scan limit (1 scan). Please sign in with Google and upgrade to a Pro plan to continue.`);
+        setShowAuthModal(true);
+        setAuthStep('credentials');
+      } else {
+        setAbuseBlockMessage(`You have exhausted your active plan allowance of ${currentLimit} scans. Please purchase a new package.`);
+        setShowUpgradeModal(true);
+      }
+      return;
+    }
+
+    setIsScanningAio(true);
+    setAioProgress(5);
+    setAioResults(null);
+    setSelectedAioPromptId(null);
+    setAioStatusMessage('Initializing crawler and AIO simulator...');
+
+    try {
+      // Step-by-step state simulation for ultra-premium UX
+      const progressSteps = [
+        { progress: 15, msg: 'Analyzing semantics and crawling target website...' },
+        { progress: 35, msg: 'Simulating search engine queries on ChatGPT-4o...' },
+        { progress: 55, msg: 'Evaluating rank positioning and citations on Gemini 1.5 Pro...' },
+        { progress: 75, msg: 'Analyzing sentiment and semantic profiles on Claude 3.5 Sonnet...' },
+        { progress: 90, msg: 'Compiling AIO strategic action checklist and Share of Voice metrics...' }
+      ];
+
+      for (const step of progressSteps) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setAioProgress(step.progress);
+        setAioStatusMessage(step.msg);
+      }
+
+      const response = await fetch('/api/aioAnalyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandName,
+          industry: brandIndustry,
+          competitors: brandCompetitors,
+          url: brandUrl || urlInput,
+          engines: selectedAioEngines
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AIO API returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      setAioProgress(100);
+      setAioStatusMessage('AIO analysis successfully completed!');
+      setAioResults(data);
+      setSelectedAioPromptId(data.prompts?.[0]?.id || null);
+
+      // Increment quota count
+      const nextCount = globalScanCount + 1;
+      setGlobalScanCount(nextCount);
+
+      // Sync count to DB if logged in
+      if (user) {
+        fetch('/api/syncUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, action: 'updateScans', scans_used: nextCount })
+        }).catch(err => console.error("Neon DB Sync Error", err));
+      }
+
+      // Sync count to LocalStorage fingerprint database
+      let latestFpDb: Record<string, { totalScans: number; emails: string[] }> = {};
+      const currentDb = localStorage.getItem('hydraseo_fingerprint_db');
+      if (currentDb) {
+        try { latestFpDb = JSON.parse(currentDb); } catch {}
+      }
+      const machineData = latestFpDb[fp] || { totalScans: 0, emails: [] };
+      machineData.totalScans = Math.max(machineData.totalScans + 1, nextCount);
+      if (user && !machineData.emails.includes(user.email)) {
+        machineData.emails.push(user.email);
+      }
+      latestFpDb[fp] = machineData;
+      localStorage.setItem('hydraseo_fingerprint_db', JSON.stringify(latestFpDb));
+
+      // Persist fallback cookie
+      if (typeof document !== 'undefined') {
+        const cookieExpiry = new Date();
+        cookieExpiry.setFullYear(cookieExpiry.getFullYear() + 2);
+        document.cookie = `hydraseo_usage_${fp}=${machineData.totalScans}; expires=${cookieExpiry.toUTCString()}; path=/; SameSite=Lax`;
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      setAioStatusMessage(`AIO analysis error: ${err.message || 'Server error'}`);
+    } finally {
+      setIsScanningAio(false);
+    }
   };
 
   const startRealScan = async () => {
@@ -772,105 +896,274 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Settings Form */}
-      <div className="card">
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <Settings size={18} style={{ color: 'var(--accent)' }} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Audit Configuration</h2>
-        </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="url-input">Initial Domain or URL</label>
-            <input 
-              type="text" 
-              id="url-input"
-              className="input" 
-              placeholder="https://example-nextjs-app.com"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              disabled={isScanning}
-            />
-          </div>
-          <button 
-            className="btn" 
-            onClick={handleScanToggle}
-            disabled={!urlInput}
-            style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem' }}
-          >
-            {isScanning ? (
-              <>
-                <Square size={16} fill="currentColor" />
-                Stop Audits
-              </>
-            ) : (
-              <>
-                <Play size={16} fill="currentColor" />
-                Start Scan
-              </>
-            )}
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-          <div className="form-group">
-            <label>Maximum Pages to Scan</label>
-            <input 
-              type="number" 
-              className="input" 
-              value={options.limit} 
-              onChange={(e) => setOptions({...options, limit: Number(e.target.value)})}
-              disabled={isScanning}
-            />
-          </div>
-          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <label className="checkbox-label">
-              <input 
-                type="checkbox" 
-                checked={options.sameHostOnly} 
-                onChange={(e) => setOptions({...options, sameHostOnly: e.target.checked})}
-                disabled={isScanning}
-              />
-              Restrict to same domain
-            </label>
-          </div>
-          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <label className="checkbox-label">
-              <input 
-                type="checkbox" 
-                checked={options.excludeQueryString} 
-                onChange={(e) => setOptions({...options, excludeQueryString: e.target.checked})}
-                disabled={isScanning}
-              />
-              Exclude query parameters
-            </label>
-          </div>
-          <div className="form-group">
-            <label>Ignore Routes & Paths</label>
-            <input 
-              type="text" 
-              className="input" 
-              value={options.ignorePaths} 
-              onChange={(e) => setOptions({...options, ignorePaths: e.target.value})}
-              disabled={isScanning}
-            />
-          </div>
-          <div className="form-group">
-            <label>Estimated Daily Queries / Traffic</label>
-            <input 
-              type="number" 
-              className="input" 
-              value={options.estimatedQueries} 
-              onChange={(e) => setOptions({...options, estimatedQueries: Number(e.target.value)})}
-              disabled={isScanning}
-              min={1}
-            />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
-              Evaluates server-side CPU performance requirements for NWSAPI optimization.
-            </span>
-          </div>
-        </div>
+      {/* Mode Segmented Tab Control */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginBottom: '1.5rem',
+        backgroundColor: 'var(--bg-secondary)',
+        border: '1px solid var(--border)',
+        padding: '0.4rem',
+        borderRadius: '9999px',
+        maxWidth: 'fit-content',
+        boxShadow: 'var(--shadow-1)',
+        alignItems: 'center'
+      }}>
+        <button
+          onClick={() => setScanMode('seo')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1.5rem',
+            borderRadius: '9999px',
+            backgroundColor: scanMode === 'seo' ? 'var(--accent)' : 'transparent',
+            color: scanMode === 'seo' ? '#0a0e15' : 'var(--text-secondary)',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.25s cubic-bezier(0.2, 0, 0, 1)'
+          }}
+        >
+          <Wrench size={14} />
+          Technical SEO Scan
+        </button>
+        <button
+          onClick={() => setScanMode('aio')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 1.5rem',
+            borderRadius: '9999px',
+            backgroundColor: scanMode === 'aio' ? 'var(--accent)' : 'transparent',
+            color: scanMode === 'aio' ? '#0a0e15' : 'var(--text-secondary)',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.25s cubic-bezier(0.2, 0, 0, 1)'
+          }}
+        >
+          <Brain size={14} />
+          AI Presence Audit (AIO)
+        </button>
       </div>
+
+      {/* Settings Form */}
+      {scanMode === 'seo' ? (
+        <div className="card">
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <Settings size={18} style={{ color: 'var(--accent)' }} />
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Audit Configuration</h2>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="url-input">Initial Domain or URL</label>
+              <input 
+                type="text" 
+                id="url-input"
+                className="input" 
+                placeholder="https://example-nextjs-app.com"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                disabled={isScanning}
+              />
+            </div>
+            <button 
+              className="btn" 
+              onClick={handleScanToggle}
+              disabled={!urlInput}
+              style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem' }}
+            >
+              {isScanning ? (
+                <>
+                  <Square size={16} fill="currentColor" />
+                  Stop Audits
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  Start Scan
+                </>
+              )}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+            <div className="form-group">
+              <label>Maximum Pages to Scan</label>
+              <input 
+                type="number" 
+                className="input" 
+                value={options.limit} 
+                onChange={(e) => setOptions({...options, limit: Number(e.target.value)})}
+                disabled={isScanning}
+              />
+            </div>
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <label className="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  checked={options.sameHostOnly} 
+                  onChange={(e) => setOptions({...options, sameHostOnly: e.target.checked})}
+                  disabled={isScanning}
+                />
+                Restrict to same domain
+              </label>
+            </div>
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <label className="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  checked={options.excludeQueryString} 
+                  onChange={(e) => setOptions({...options, excludeQueryString: e.target.checked})}
+                  disabled={isScanning}
+                />
+                Exclude query parameters
+              </label>
+            </div>
+            <div className="form-group">
+              <label>Ignore Routes & Paths</label>
+              <input 
+                type="text" 
+                className="input" 
+                value={options.ignorePaths} 
+                onChange={(e) => setOptions({...options, ignorePaths: e.target.value})}
+                disabled={isScanning}
+              />
+            </div>
+            <div className="form-group">
+              <label>Estimated Daily Queries / Traffic</label>
+              <input 
+                type="number" 
+                className="input" 
+                value={options.estimatedQueries} 
+                onChange={(e) => setOptions({...options, estimatedQueries: Number(e.target.value)})}
+                disabled={isScanning}
+                min={1}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+                Evaluates server-side CPU performance requirements for NWSAPI optimization.
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <Brain size={18} style={{ color: 'var(--accent)' }} />
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>AI Presence & Brand Search Configuration (AIO)</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                Discover how AI platforms (from ChatGPT to Gemini) position and talk about your brand online.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Brand Name</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. HydraSEO"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Official Website</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. https://hydraseo.com (optional)"
+                value={brandUrl}
+                onChange={(e) => setBrandUrl(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Sector / Product Category</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. SEO Tools, SaaS, E-commerce..."
+                value={brandIndustry}
+                onChange={(e) => setBrandIndustry(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Main Competitors (comma separated)</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. Screaming Frog, Ahrefs, Semrush"
+                value={brandCompetitors}
+                onChange={(e) => setBrandCompetitors(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+            <button 
+              className="btn" 
+              onClick={startAioScan}
+              disabled={!brandName || !brandIndustry || isScanningAio}
+              style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem', backgroundColor: 'var(--success)', color: '#0a0e15', boxShadow: '0 4px 12px rgba(122, 194, 112, 0.25)' }}
+            >
+              {isScanningAio ? (
+                <>
+                  <Square size={16} fill="currentColor" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  Start AI Analysis
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Engine Checkboxes */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              AI Models & LLMs to Query
+            </label>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+              {[
+                { id: 'chatgpt', name: 'ChatGPT (GPT-4o)' },
+                { id: 'gemini', name: 'Gemini (1.5 Pro)' },
+                { id: 'claude', name: 'Claude (3.5 Sonnet)' },
+                { id: 'perplexity', name: 'Perplexity AI' },
+                { id: 'copilot', name: 'Microsoft Copilot' }
+              ].map(engine => (
+                <label key={engine.id} className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedAioEngines.includes(engine.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedAioEngines([...selectedAioEngines, engine.id]);
+                      } else {
+                        setSelectedAioEngines(selectedAioEngines.filter(id => id !== engine.id));
+                      }
+                    }}
+                    disabled={isScanningAio}
+                  />
+                  {engine.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 🌟 Monetization Portal & Quota Dashboard */}
       {!user ? (
@@ -1240,6 +1533,25 @@ export default function Home() {
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontFamily: 'monospace' }}>
             {statusMessage}
+          </p>
+        </div>
+      )}
+
+      {/* AIO Progress */}
+      {isScanningAio && (
+        <div className="card" style={{ borderLeft: '4px solid var(--success)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Brain className="animate-pulse" size={16} style={{ color: 'var(--success)' }} />
+              Analisi della Presenza Brand IA in corso...
+            </span>
+            <span style={{ color: 'var(--text-secondary)' }}>{aioProgress}%</span>
+          </div>
+          <div className="progress-container">
+            <div className="progress-bar" style={{ width: `${aioProgress}%`, background: 'linear-gradient(90deg, var(--success), var(--accent))' }}></div>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontFamily: 'monospace' }}>
+            {aioStatusMessage}
           </p>
         </div>
       )}
@@ -1695,6 +2007,418 @@ export default function Home() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 🧠 AIO Results Dashboard */}
+      {scanMode === 'aio' && aioResults && (
+        <>
+          {/* AIO Summary Stats Grid */}
+          <div className="stats-grid" style={{ marginTop: '2rem' }}>
+            <div className="stat-card" style={{ borderTop: '4px solid var(--accent)', background: 'linear-gradient(180deg, rgba(31, 164, 232, 0.05) 0%, rgba(16, 22, 34, 1) 100%)' }}>
+              <span className="value" style={{ color: 'var(--accent)' }}>{aioResults.overallMetrics.shareOfVoice}%</span>
+              <span className="label" style={{ marginTop: '0.5rem' }}>AI Share of Voice</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Industry Share of Mentions</span>
+            </div>
+            
+            <div className="stat-card" style={{ borderTop: '4px solid var(--success)', background: 'linear-gradient(180deg, rgba(122, 194, 112, 0.05) 0%, rgba(16, 22, 34, 1) 100%)' }}>
+              <span className="value" style={{ color: 'var(--success)' }}>{aioResults.overallMetrics.visibilityIndex}/10</span>
+              <span className="label" style={{ marginTop: '0.5rem' }}>AIO Visibility Index</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Positioning Authority Score</span>
+            </div>
+
+            <div className="stat-card" style={{ borderTop: '4px solid var(--warning)', background: 'linear-gradient(180deg, rgba(251, 191, 36, 0.05) 0%, rgba(16, 22, 34, 1) 100%)' }}>
+              <span className="value" style={{ color: 'var(--warning)' }}>{aioResults.overallMetrics.sentimentPositive}%</span>
+              <span className="label" style={{ marginTop: '0.5rem' }}>Positive AI Sentiment</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{aioResults.overallMetrics.sentimentNeutral}% Neutral | {aioResults.overallMetrics.sentimentNegative}% Negative</span>
+            </div>
+
+            <div className="stat-card" style={{ borderTop: '4px solid #a855f7', background: 'linear-gradient(180deg, rgba(168, 85, 247, 0.05) 0%, rgba(16, 22, 34, 1) 100%)' }}>
+              <span className="value" style={{ color: '#c084fc' }}>{aioResults.overallMetrics.citationRate}%</span>
+              <span className="label" style={{ marginTop: '0.5rem' }}>Citation Link Rate</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Direct backlink references in replies</span>
+            </div>
+          </div>
+
+          {/* Scanned metadata highlights (if crawled) */}
+          {aioResults.scannedMetadata && (
+            <div className="card" style={{ borderLeft: '4px solid var(--success)', backgroundColor: 'rgba(122, 194, 112, 0.015)' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <CheckCircle size={18} style={{ color: 'var(--success)' }} />
+                <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Website Semantic Scan Completed</h3>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5', margin: 0 }}>
+                We have successfully analyzed your brand landing page. Detected Title: <strong style={{ color: 'var(--text-primary)' }}>"{aioResults.scannedMetadata.title}"</strong>. 
+                Description: <span style={{ fontStyle: 'italic' }}>"{aioResults.scannedMetadata.description}"</span>. 
+                Our analysis models extracted the following semantic keywords to drive the AIO simulation: {aioResults.scannedMetadata.detectedKeywords.map((kw: string) => <code key={kw} style={{ color: 'var(--accent)', marginLeft: '0.35rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.75rem' }}>{kw}</code>)}.
+              </p>
+            </div>
+          )}
+
+          {/* Narrative & Share Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+            {/* Share of voice comparison */}
+            <div className="card" style={{ marginBottom: 0 }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <GitCompare size={18} style={{ color: 'var(--accent)' }} />
+                AI Share of Voice Comparison
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Brand bar */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '700', marginBottom: '0.4rem' }}>
+                    <span style={{ color: 'var(--accent)' }}>{aioResults.brandName} (You)</span>
+                    <span>{aioResults.overallMetrics.shareOfVoice}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '14px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '9999px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                    <div style={{
+                      width: `${aioResults.overallMetrics.shareOfVoice}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%)',
+                      borderRadius: '9999px',
+                      boxShadow: '0 0 8px var(--accent)'
+                    }} />
+                  </div>
+                </div>
+
+                {/* Competitors bars */}
+                {aioResults.competitorMetrics.map((comp: any) => (
+                  <div key={comp.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>
+                      <span>{comp.name}</span>
+                      <span>{comp.shareOfVoice}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '10px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '9999px', overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${comp.shareOfVoice}%`,
+                        height: '100%',
+                        backgroundColor: 'var(--text-tertiary)',
+                        borderRadius: '9999px'
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '1.5rem', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '12px', padding: '0.85rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                <span style={{ fontWeight: '700', color: 'var(--accent)', display: 'block', marginBottom: '0.2rem' }}>How it is calculated:</span>
+                Semantic analysis of 120 generated responses across targeted search queries, measuring brand inclusion rates.
+              </div>
+            </div>
+
+            {/* Narrative themes */}
+            <div className="card" style={{ marginBottom: 0 }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Compass size={18} style={{ color: 'var(--success)' }} />
+                AI Positioning & Narrative Profile
+              </h3>
+              
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '1.25rem' }}>
+                {aioResults.narrativeProfile.narrativeSummary}
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {aioResults.narrativeProfile.brandAttributes.map((attr: any, idx: number) => (
+                  <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    {attr.positive ? (
+                      <CheckCircle size={16} style={{ color: 'var(--success)', marginTop: '0.1rem', flexShrink: 0 }} />
+                    ) : (
+                      <AlertTriangle size={16} style={{ color: 'var(--warning)', marginTop: '0.1rem', flexShrink: 0 }} />
+                    )}
+                    <div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-primary)', display: 'block' }}>{attr.name}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{attr.description}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Chat Simulator */}
+          <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+            {/* Header of simulator card */}
+            <div style={{ borderBottom: '1px solid var(--border)', padding: '1.5rem 2.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Brain size={18} style={{ color: 'var(--accent)' }} />
+                  AI Prompt & Query Simulator
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                  Select a search engine prompt to preview how AI virtual assistants describe and position your brand.
+                </p>
+              </div>
+              <span className="badge badge-ok" style={{ textTransform: 'none', fontWeight: '600' }}>
+                {aioResults.prompts.length} High-Impact Prompts Analyzed
+              </span>
+            </div>
+
+            {/* Split layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+              {/* Left Column: Prompts List */}
+              <div style={{ borderRight: '1px solid var(--border)', backgroundColor: 'rgba(0,0,0,0.1)' }}>
+                {aioResults.prompts.map((p: any) => {
+                  const isSelected = p.id === selectedAioPromptId;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedAioPromptId(p.id)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '1.25rem 1.5rem',
+                        border: 'none',
+                        borderBottom: '1px solid var(--border)',
+                        backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s',
+                        position: 'relative'
+                      }}
+                    >
+                      {isSelected && (
+                        <div style={{ position: 'absolute', left: 0, top: 0, width: '4px', height: '100%', backgroundColor: 'var(--accent)' }} />
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.04em' }}>{p.engine}</span>
+                        <span style={{ 
+                          fontSize: '0.65rem', 
+                          padding: '0.15rem 0.4rem', 
+                          borderRadius: '4px',
+                          backgroundColor: p.sentiment === 'positive' ? 'rgba(122,194,112,0.12)' : 'rgba(251,191,36,0.1)',
+                          color: p.sentiment === 'positive' ? 'var(--success)' : 'var(--warning)',
+                          fontWeight: '700'
+                        }}>
+                          {p.sentiment === 'positive' ? 'Positive' : 'Neutral'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.825rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isSelected ? '700' : '500', margin: 0, lineHeight: '1.4' }}>
+                        "{p.prompt}"
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Column: Chat Box Output */}
+              <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', backgroundColor: 'var(--bg-secondary)', minHeight: '380px' }}>
+                {(() => {
+                  const activePrompt = aioResults.prompts.find((p: any) => p.id === selectedAioPromptId);
+                  if (!activePrompt) {
+                    return (
+                      <div style={{ display: 'flex', flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', gap: '0.5rem' }}>
+                        <Brain size={32} style={{ opacity: 0.3 }} />
+                        <span>Select a prompt on the left to view the simulation.</span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {/* LLM Chat Container */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
+                        {/* User Prompt bubble */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <div style={{ backgroundColor: 'var(--accent-container)', border: '1px solid var(--border)', padding: '1rem 1.25rem', borderRadius: '20px 20px 4px 20px', maxWidth: '85%' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--on-accent-container)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem', letterSpacing: '0.04em' }}>User Query</span>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, fontWeight: 550 }}>"{activePrompt.prompt}"</p>
+                          </div>
+                        </div>
+
+                        {/* Assistant Response bubble */}
+                        <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            backgroundColor: activePrompt.engine.includes('ChatGPT') ? '#10a37f' : activePrompt.engine.includes('Gemini') ? '#4285f4' : activePrompt.engine.includes('Claude') ? '#d97706' : 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ffffff',
+                            fontWeight: '800',
+                            fontSize: '0.75rem',
+                            flexShrink: 0
+                          }}>
+                            {activePrompt.engine[0]}
+                          </div>
+
+                          <div style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '4px 20px 20px 20px', maxWidth: '85%', boxShadow: 'var(--shadow-1)' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem', letterSpacing: '0.04em' }}>Response from {activePrompt.engine}</span>
+                            
+                            {/* Simulated LLM rich text */}
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                              {/* Highlight brand and competitors */}
+                              {activePrompt.response.split(/(\*\*.*?\*\*)/g).map((part: string, idx: number) => {
+                                if (part.startsWith('**') && part.endsWith('**')) {
+                                  const text = part.slice(2, -2);
+                                  const isBrand = text.toLowerCase().includes(aioResults.brandName.toLowerCase());
+                                  return (
+                                    <strong 
+                                      key={idx} 
+                                      style={{ 
+                                        color: isBrand ? 'var(--accent)' : 'var(--text-primary)', 
+                                        backgroundColor: isBrand ? 'rgba(31, 164, 232, 0.08)' : 'transparent',
+                                        padding: isBrand ? '0.05rem 0.25rem' : '0',
+                                        borderRadius: '4px'
+                                      }}
+                                    >
+                                      {text}
+                                    </strong>
+                                  );
+                                }
+                                return part;
+                              })}
+                            </div>
+
+                            {/* Citation Link badge if cited */}
+                            {activePrompt.citationStatus === 'cited' && (
+                              <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px dashed var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Citations / Sources Provided:</span>
+                                <a 
+                                  href={activePrompt.citationUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    color: 'var(--accent)',
+                                    fontWeight: '700',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem',
+                                    textDecoration: 'underline'
+                                  }}
+                                >
+                                  {aioResults.brandName} Official Site
+                                  <ExternalLink size={10} />
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Prompt Analytics Footer */}
+                      <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '0.25rem' }}>Analytical Sentiment</span>
+                          <span className={`badge ${activePrompt.sentiment === 'positive' ? 'badge-ok' : 'badge-warning'}`}>
+                            {activePrompt.sentiment === 'positive' ? 'Positive (Strong)' : 'Neutral (Informative)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '0.25rem' }}>Citation Status</span>
+                          <span className={`badge ${activePrompt.citationStatus === 'cited' ? 'badge-ok' : 'badge-critical'}`} style={{ color: activePrompt.citationStatus === 'cited' ? 'var(--success)' : 'var(--warning)', backgroundColor: activePrompt.citationStatus === 'cited' ? 'rgba(122, 194, 112, 0.12)' : 'rgba(251, 191, 36, 0.1)' }}>
+                            {activePrompt.citationStatus === 'cited' ? 'Backlink Detected' : 'No Direct Link'}
+                          </span>
+                        </div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '0.25rem' }}>Positioning Rank</span>
+                          <span className="badge badge-ok" style={{ color: 'var(--accent)', backgroundColor: 'var(--accent-container)' }}>
+                            {activePrompt.positioning === 'primary' ? 'Primary Choice (#1)' : 'Secondary Mention'}
+                          </span>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '0.25rem' }}>Strategic Takeaway</span>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-primary)', margin: 0, lineHeight: '1.4', fontStyle: 'italic' }}>
+                            {activePrompt.keyTakeaway}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+
+          {/* AIO Action Plan Checklist */}
+          <div className="card" style={{ borderLeft: '4px solid var(--accent)', marginTop: '2rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <Sparkles size={18} style={{ color: 'var(--accent)' }} />
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>AIO Action Plan: AI Semantic Search Strategy</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                  Implement these actionable steps to optimize citations, brand authority, and Share of Voice inside generated AI answers.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {aioResults.aioRecommendations.map((rec: any) => (
+                <div 
+                  key={rec.id} 
+                  style={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.01)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '16px', 
+                    padding: '1.25rem 1.5rem',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: '1rem',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                      <span className={`badge ${rec.impact === 'high' ? 'badge-critical' : 'badge-warning'}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.6rem' }}>
+                        Impact: {rec.impact.toUpperCase()}
+                      </span>
+                      <span className="badge" style={{ fontSize: '0.65rem', padding: '0.15rem 0.6rem', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                        Difficulty: {rec.difficulty.toUpperCase()}
+                      </span>
+                      <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>{rec.title}</h4>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5' }}>
+                      {rec.description}
+                    </p>
+                    
+                    {/* Action Step code highlight */}
+                    <div style={{ marginTop: '0.75rem', backgroundColor: 'var(--bg-primary)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 700, display: 'block', textTransform: 'uppercase', marginBottom: '0.25rem', letterSpacing: '0.04em' }}>Recommended Action:</span>
+                      <code style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-primary)' }}>{rec.action}</code>
+                    </div>
+                  </div>
+                  
+                  {/* Micro task checkbox */}
+                  <div>
+                    <button style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      border: '2px solid var(--border)',
+                      backgroundColor: 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--accent)',
+                      fontWeight: '800',
+                      transition: 'all 0.2s'
+                    }}
+                    onClick={(e) => {
+                      const target = e.currentTarget;
+                      if (target.style.backgroundColor === 'var(--accent-container)') {
+                        target.style.backgroundColor = 'transparent';
+                        target.style.color = 'var(--accent)';
+                        target.innerHTML = '';
+                      } else {
+                        target.style.backgroundColor = 'var(--accent-container)';
+                        target.style.color = 'var(--success)';
+                        target.innerHTML = '✓';
+                      }
+                    }}
+                    title="Mark as completed"
+                    >
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </>
