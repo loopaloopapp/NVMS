@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Launch Playwright for full render & performance audits
-    const renderedHtmlRes = await renderWithBrowser(url);
+    const renderedHtmlRes = await renderWithBrowser(url, initialHtmlRes.durationMs);
     const renderedHtml = renderedHtmlRes.html || initialHtmlRes.html;
     const renderedMetadata = extractHeadMetadata(renderedHtml);
     const renderedContent = extractContentSignals(renderedHtml);
