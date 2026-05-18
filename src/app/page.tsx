@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Play, Square, AlertCircle, AlertTriangle, CheckCircle, Info, 
   ChevronRight, Download, Filter, HelpCircle, FileText, Check, ShieldAlert, ShieldCheck,
   Server, Laptop, Sparkles, ArrowRight, Gauge, Activity, Compass, Settings, ChevronDown, ChevronUp, Network, CornerDownRight, GitCompare,
-  Sun, Moon, X
+  Sun, Moon, X, Brain, Wrench
 } from 'lucide-react';
+
 
 
 interface ScanOption {
@@ -53,7 +55,7 @@ export default function Home() {
   const [hardwareFingerprint, setHardwareFingerprint] = useState('');
   const [globalScanCount, setGlobalScanCount] = useState(0);
   const [userPlan, setUserPlan] = useState<'Free Tier' | 'Pro (100 Scans)' | 'Pro (500 Scans)' | 'Pro (1000 Scans)' | 'Ultimate (Infinite)'>('Free Tier');
-  const [isProcessingPurchase, setIsProcessingPurchase] = useState<string>('');
+  const router = useRouter();
 
   // Canvas & Hardware Fingerprinting for Anti-Abuse
   const getDeviceFingerprint = () => {
@@ -175,41 +177,6 @@ export default function Home() {
     } else {
       setUserPlan('Free Tier');
     }
-  };
-
-  // 💳 Secure Premium Billing Checkout Simulator
-  const handlePurchasePlan = (planName: typeof userPlan) => {
-    setIsProcessingPurchase(planName);
-    setTimeout(() => {
-      setIsProcessingPurchase('');
-      setUserPlan(planName);
-      localStorage.setItem(`hydraseo_user_plan_${user?.email || 'guest'}`, planName);
-      
-      // Reset active usage counter to let them use the entire new quota allowance!
-      setGlobalScanCount(0);
-      
-      const fp = hardwareFingerprint || getDeviceFingerprint();
-      let fpDb: Record<string, { totalScans: number; emails: string[] }> = {};
-      const localDb = localStorage.getItem('hydraseo_fingerprint_db');
-      if (localDb) {
-        try { fpDb = JSON.parse(localDb); } catch {}
-      }
-      const fpData = fpDb[fp] || { totalScans: 0, emails: [] };
-      fpData.totalScans = 0; // reset active machine counter for premium users!
-      fpDb[fp] = fpData;
-      localStorage.setItem('hydraseo_fingerprint_db', JSON.stringify(fpDb));
-
-      // Reset resilient secure fallback cookie
-      if (typeof document !== 'undefined') {
-        const cookieExpiry = new Date();
-        cookieExpiry.setFullYear(cookieExpiry.getFullYear() + 2);
-        document.cookie = `hydraseo_usage_${fp}=0; expires=${cookieExpiry.toUTCString()}; path=/; SameSite=Lax`;
-      }
-
-      setShowUpgradeModal(false);
-      setAbuseBlockMessage('');
-      alert(`Congratulations! You have successfully upgraded to the ${planName} package. Your scan limits have been lifted immediately!`);
-    }, 1500);
   };
 
   const handleAuthSubmit = () => {
@@ -346,20 +313,25 @@ export default function Home() {
     // 🕵️ Anti-Abuse & Monetization Checks
     const fp = hardwareFingerprint || getDeviceFingerprint();
     const isPro = userPlan !== 'Free Tier';
+    // Define quota per plan (Free Tier gets only 1 scan)
     const currentLimit = userPlan === 'Ultimate (Infinite)' ? Infinity : 
                          userPlan === 'Pro (100 Scans)' ? 100 : 
                          userPlan === 'Pro (500 Scans)' ? 500 : 
-                         userPlan === 'Pro (1000 Scans)' ? 1000 : 10;
+                         userPlan === 'Pro (1000 Scans)' ? 1000 : 
+                         1; // free tier limited to a single scan
 
     // Check if total usage already reached
     if (globalScanCount >= currentLimit) {
       setIsScanning(false);
       if (userPlan === 'Free Tier') {
-        setAbuseBlockMessage(`You have reached the 10 free scans limit for guests. Please upgrade to a Pro plan to continue analyzing.`);
+        setAbuseBlockMessage(`You have reached the free scan limit (1 scan). Please sign in with Google and upgrade to a Pro plan to continue.`);
+        // Force sign‑in prompt for free users
+        setShowAuthModal(true);
+        setAuthStep('credentials');
       } else {
-        setAbuseBlockMessage(`You have exhausted your active plan allowance of ${currentLimit} scans. Please purchase a new package to continue.`);
+        setAbuseBlockMessage(`You have exhausted your active plan allowance of ${currentLimit} scans. Please purchase a new package.`);
+        setShowUpgradeModal(true);
       }
-      setShowUpgradeModal(true);
       return;
     }
 
@@ -889,7 +861,15 @@ export default function Home() {
               Get Started (Google Sign Up)
             </button>
             <button 
-              onClick={() => setShowUpgradeModal(true)}
+              onClick={() => {
+                if (!user) {
+                  // Prompt sign‑in if not authenticated
+                  setShowAuthModal(true);
+                  setAuthStep('credentials');
+                } else {
+                  router.push('/upgrade');
+                }
+              }}
               className="btn"
               style={{ 
                 backgroundColor: 'transparent', 
@@ -2448,156 +2428,20 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Pricing Options Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem', width: '100%', marginBottom: '1rem' }}>
-              
-              {/* Option 1: 100 Scans */}
-              <div style={{ 
-                backgroundColor: 'var(--bg-tertiary)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '20px', 
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.25s',
-                boxShadow: 'var(--shadow-1)'
-              }}>
-                <div>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', margin: '0 0 0.5rem 0' }}>Enterprise Starter</h4>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>$9.99</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>/ one-time</span>
-                  </div>
-                  <ul style={{ paddingLeft: '1.2rem', margin: '0 0 1.5rem 0', fontSize: '0.775rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}>
-                    <li><b>100</b> deep-crawler page scans</li>
-                    <li>Core Web Vitals timing reports</li>
-                    <li>SEO comparison tools</li>
-                  </ul>
-                </div>
-                <button 
-                  onClick={() => handlePurchasePlan('Pro (100 Scans)')}
-                  disabled={!!isProcessingPurchase}
-                  className="btn"
-                  style={{ width: '100%', height: '40px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '9999px', textTransform: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                >
-                  {isProcessingPurchase === 'Pro (100 Scans)' ? 'Processing...' : 'Buy 100 Scans'}
-                </button>
-              </div>
-
-              {/* Option 2: 500 Scans (Recommended!) */}
-              <div style={{ 
-                backgroundColor: 'var(--bg-tertiary)', 
-                border: '2px solid var(--success)', 
-                borderRadius: '20px', 
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                position: 'relative',
-                transition: 'all 0.25s',
-                boxShadow: 'var(--shadow-2)'
-              }}>
-                <div style={{ position: 'absolute', top: '-0.75rem', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--success)', color: '#0a0e15', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Most Popular
-                </div>
-                <div>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--success)', letterSpacing: '0.05em', margin: '0.5rem 0 0.5rem 0' }}>Pro Growth</h4>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>$19.99</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>/ one-time</span>
-                  </div>
-                  <ul style={{ paddingLeft: '1.2rem', margin: '0 0 1.5rem 0', fontSize: '0.775rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}>
-                    <li><b>500</b> deep-crawler page scans</li>
-                    <li>Full PageSpeed audits & suggestions</li>
-                    <li>Advanced NWSAPI checks</li>
-                    <li>Priority queue processing</li>
-                  </ul>
-                </div>
-                <button 
-                  onClick={() => handlePurchasePlan('Pro (500 Scans)')}
-                  disabled={!!isProcessingPurchase}
-                  className="btn"
-                  style={{ width: '100%', height: '40px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '9999px', backgroundColor: 'var(--success)', color: '#0a0e15', border: 'none', textTransform: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                >
-                  {isProcessingPurchase === 'Pro (500 Scans)' ? 'Processing...' : 'Buy 500 Scans'}
-                </button>
-              </div>
-
-              {/* Option 3: 1000 Scans */}
-              <div style={{ 
-                backgroundColor: 'var(--bg-tertiary)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '20px', 
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.25s',
-                boxShadow: 'var(--shadow-1)'
-              }}>
-                <div>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', margin: '0 0 0.5rem 0' }}>Agency Scale</h4>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>$29.99</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>/ one-time</span>
-                  </div>
-                  <ul style={{ paddingLeft: '1.2rem', margin: '0 0 1.5rem 0', fontSize: '0.775rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}>
-                    <li><b>1000</b> deep-crawler page scans</li>
-                    <li>Full priority crawler allocation</li>
-                    <li>Enterprise PDF audit exports</li>
-                  </ul>
-                </div>
-                <button 
-                  onClick={() => handlePurchasePlan('Pro (1000 Scans)')}
-                  disabled={!!isProcessingPurchase}
-                  className="btn"
-                  style={{ width: '100%', height: '40px', fontSize: '0.8rem', fontWeight: 700, borderRadius: '9999px', textTransform: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                >
-                  {isProcessingPurchase === 'Pro (1000 Scans)' ? 'Processing...' : 'Buy 1000 Scans'}
-                </button>
-              </div>
-
-              {/* Option 4: Infinite Scans */}
-              <div style={{ 
-                backgroundColor: 'var(--bg-tertiary)', 
-                border: '1px solid var(--accent)', 
-                borderRadius: '20px', 
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transition: 'all 0.25s',
-                boxShadow: 'var(--shadow-2)',
-                gridColumn: '1 / -1'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--accent)', letterSpacing: '0.05em', margin: '0 0 0.25rem 0' }}>Ultimate Core Yearly</h4>
-                    <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', margin: 0 }}>
-                      Absolute infinite priority crawler page audits & deep PageSpeed reports. Lift all locks!
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                    <span style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-primary)' }}>$99.99</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>/ year</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => handlePurchasePlan('Ultimate (Infinite)')}
-                  disabled={!!isProcessingPurchase}
-                  className="btn"
-                  style={{ width: '100%', height: '44px', fontSize: '0.85rem', fontWeight: 700, borderRadius: '9999px', backgroundColor: 'var(--accent)', color: '#0a0e15', border: 'none', textTransform: 'none', boxShadow: 'none', cursor: 'pointer', marginTop: '1.25rem' }}
-                >
-                  {isProcessingPurchase === 'Ultimate (Infinite)' ? 'Processing Secure Google Checkout...' : 'Purchase Infinite Access ($99.99/year)'}
-                </button>
-              </div>
-
+            {/* Redirect to Dedicated Upgrade Page */}
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <button 
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  router.push('/upgrade');
+                }}
+                className="btn"
+                style={{ height: '44px', fontSize: '1rem', fontWeight: 700, borderRadius: '9999px', backgroundColor: 'var(--success)', color: '#0a0e15', border: 'none', padding: '0 2rem', cursor: 'pointer' }}
+              >
+                View Premium Plans & Checkout
+              </button>
             </div>
 
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '0.5rem', lineHeight: '1.4' }}>
-              🔒 Transactions processed securely using Mock Google Pay Core integrations. Charges appear on bank records under HYDRASEO_PRO_SERVICES. All purchases are backed by a robust 14-day refund guarantee.
-            </p>
           </div>
         </div>
       )}
