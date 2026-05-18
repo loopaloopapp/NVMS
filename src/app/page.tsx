@@ -155,27 +155,43 @@ export default function Home() {
 
 
   // Auth Functions
-  const handleLogin = (email: string, name: string) => {
+  const handleLogin = async (email: string, name: string) => {
     const newUser = { email, name, avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${name}` };
     setUser(newUser);
     localStorage.setItem('hydraseo_active_user', JSON.stringify(newUser));
     setShowAuthModal(false);
     setAuthStep('credentials');
     
-    // Load scans for this user with legacy fallback
+    // Call DB API to sync user
+    try {
+      const res = await fetch('/api/syncUser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, avatar_url: newUser.avatarUrl })
+      });
+      const dbUser = await res.json();
+      if (dbUser && dbUser.plan) {
+         let planStr = dbUser.plan === 'free' ? 'Free Tier' : 
+                       dbUser.plan === 'pro' ? 'Ultimate (Infinite)' : dbUser.plan;
+         setUserPlan(planStr);
+         localStorage.setItem(`hydraseo_user_plan_${email}`, planStr);
+         
+         if (dbUser.scans_used !== undefined) {
+            setGlobalScanCount(dbUser.scans_used);
+         }
+      }
+    } catch (e) {
+      console.error('Failed to sync user', e);
+      const storedPlan = localStorage.getItem(`hydraseo_user_plan_${email}`);
+      setUserPlan((storedPlan as any) || 'Free Tier');
+    }
+
+    // Load local history
     const scans = localStorage.getItem(`hydraseo_user_scans_${email}`) || localStorage.getItem(`nvms_user_scans_${email}`);
     if (scans) {
       setSavedScans(JSON.parse(scans));
     } else {
       setSavedScans([]);
-    }
-
-    // Dynamic quota lookup for logged-in user
-    const storedPlan = localStorage.getItem(`hydraseo_user_plan_${email}`) as any;
-    if (storedPlan) {
-      setUserPlan(storedPlan);
-    } else {
-      setUserPlan('Free Tier');
     }
   };
 
@@ -413,6 +429,15 @@ export default function Home() {
         const nextCount = globalScanCount + 1;
         setGlobalScanCount(nextCount);
 
+        // Sync to Neon DB if user is logged in
+        if (user) {
+          fetch('/api/syncUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, action: 'updateScans', scans_used: nextCount })
+          }).catch(err => console.error("Neon DB Sync Error", err));
+        }
+
         let latestFpDb: Record<string, { totalScans: number; emails: string[] }> = {};
         const currentDb = localStorage.getItem('hydraseo_fingerprint_db');
         if (currentDb) {
@@ -629,26 +654,48 @@ export default function Home() {
   return (
     <div className="container">
       {/* Header */}
-      <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <header className="header" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '1.5rem', width: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
           <img 
             src="/hydraseo-logo.png" 
             alt="HydraSEO Logo" 
-            style={{ width: '56px', height: '56px', objectFit: 'contain' }} 
+            style={{ width: '96px', height: '96px', objectFit: 'contain', marginBottom: '0.5rem' }} 
           />
           <div>
-            <h1 style={{ background: 'linear-gradient(135deg, #7dd3fc, var(--accent), var(--success))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '2.75rem', fontWeight: 800 }}>HydraSEO</h1>
-            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.25rem' }}>Enterprise Technical SEO Auditor & Core Web Vitals Suite</p>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>Empowering engineering teams with high-speed SSR diagnostics, hydration mismatch audits, and cross-environment comparative insights.</p>
+            <h1 style={{ background: 'linear-gradient(135deg, #7dd3fc, var(--accent), var(--success))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '3rem', fontWeight: 800, margin: 0 }}>HydraSEO</h1>
+            <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '0.5rem', marginBottom: 0 }}>Enterprise Technical SEO Auditor & Core Web Vitals Suite</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem', maxWidth: '600px', margin: '0.25rem auto 0 auto' }}>Empowering engineering teams with high-speed SSR diagnostics, hydration mismatch audits, and cross-environment comparative insights.</p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+
+        <div style={{ position: 'absolute', top: '0', right: '0', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* 💎 Upgrade Plans Button */}
+          <button 
+            onClick={() => router.push('/upgrade')}
+            style={{
+              padding: '0.4rem 1rem',
+              borderRadius: '9999px',
+              backgroundColor: 'var(--accent)',
+              color: '#0a0e15',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              height: '36px'
+            }}
+          >
+            <Sparkles size={14} />
+            Upgrade Plans
+          </button>
           {/* 🌓 Theme Toggle Button */}
           <button
             onClick={toggleTheme}
             style={{
-              width: '40px',
-              height: '40px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
@@ -719,7 +766,7 @@ export default function Home() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#fbbf24"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#f87171"/>
               </svg>
-              Sign in with Google
+              Sign Up / Sign In with Google
             </button>
           )}
         </div>
@@ -2198,7 +2245,7 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <p>Audit log unavailable.</p>
+                            <p>Audit log unavailable.</p>
                 )}
               </div>
             )}
@@ -2207,148 +2254,218 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🔐 Google OAuth Login Modal Simulation */}
+          {/* 🔐 Google OAuth Login Modal Simulation */}
       {showAuthModal && (
-        <div className="drawer-backdrop" onClick={() => setShowAuthModal(false)}>
+        <div className="drawer-backdrop" onClick={() => setShowAuthModal(false)} style={{ backgroundColor: '#111111' }}>
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{ 
-              backgroundColor: 'var(--bg-secondary)', 
-              border: '1px solid var(--border)', 
-              borderRadius: '24px', 
-              padding: '2.5rem', 
+              backgroundColor: '#1f1f1f', 
+              borderRadius: '28px', 
+              padding: '2.5rem 2.5rem 3rem 2.5rem', 
               width: '100%', 
-              maxWidth: '440px', 
-              boxShadow: 'var(--shadow-5)',
+              maxWidth: '1040px', 
+              minHeight: '400px',
               display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              position: 'relative'
+              flexDirection: 'row',
+              color: '#e3e3e3',
+              fontFamily: 'Arial, sans-serif'
             }}
           >
             {authStep === 'credentials' ? (
               <>
-                {/* Google Logo Brand Icon */}
-                <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="var(--accent)"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="var(--success)"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="var(--warning)"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="var(--danger)"/>
+                {/* Left Side: Brand & Title */}
+                <div style={{ flex: '1', paddingRight: '2rem', display: 'flex', flexDirection: 'column', paddingTop: '1rem' }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.25rem' }}>
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                   </svg>
+                  <h1 style={{ fontSize: '2.25rem', fontWeight: 400, color: '#f1f3f4', margin: '0 0 0.5rem 0' }}>Sign in</h1>
+                  <p style={{ fontSize: '1rem', color: '#f1f3f4', margin: 0 }}>to continue to HydraSEO</p>
                 </div>
 
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Sign in to HydraSEO</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-                  to continue to your Technical SEO & simulated Core Web Vitals Auditor dashboard.
-                </p>
-
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '1.75rem' }}>
-                  <div className="form-group" style={{ textAlign: 'left', marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Google Email Address</label>
-                    <input 
-                      type="email" 
-                      className="input" 
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      style={{ width: '100%' }}
-                    />
+                {/* Right Side: Inputs & Actions */}
+                <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: '1.5rem' }}>
+                  
+                  <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                    <div style={{ 
+                      border: '1px solid #5f6368', 
+                      borderRadius: '4px', 
+                      padding: '0.75rem 1rem',
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <label style={{ 
+                        position: 'absolute', 
+                        top: '-10px', 
+                        left: '10px', 
+                        backgroundColor: '#1f1f1f', 
+                        padding: '0 4px', 
+                        fontSize: '0.75rem', 
+                        color: '#8ab4f8' 
+                      }}>
+                        Email or phone
+                      </label>
+                      <input 
+                        type="text" 
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        onKeyDown={(e) => { if(e.key === 'Enter' && authEmail) setAuthStep('permissions') }}
+                        style={{ 
+                          width: '100%', 
+                          background: 'transparent', 
+                          border: 'none', 
+                          outline: 'none', 
+                          color: '#e8eaed', 
+                          fontSize: '1rem' 
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <a href="#" style={{ color: '#8ab4f8', fontSize: '0.875rem', textDecoration: 'none', fontWeight: 500 }}>Forgot email?</a>
+                    </div>
                   </div>
 
-                  <div className="form-group" style={{ textAlign: 'left', marginBottom: 0 }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Profile Display Name</label>
-                    <input 
-                      type="text" 
-                      className="input" 
-                      value={authName}
-                      onChange={(e) => setAuthName(e.target.value)}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
+                  <div>
+                    <p style={{ fontSize: '0.875rem', color: '#9aa0a6', lineHeight: '1.5', marginBottom: '2.5rem' }}>
+                      Before using this app, you can review HydraSEO&apos;s <a href="#" style={{ color: '#8ab4f8', textDecoration: 'none' }}>Privacy Policy</a> and <a href="#" style={{ color: '#8ab4f8', textDecoration: 'none' }}>Terms of Service</a>.
+                    </p>
 
-                <div style={{ display: 'flex', width: '100%', gap: '0.75rem' }}>
-                  <button 
-                    onClick={handleAuthSubmit}
-                    className="btn"
-                    style={{ flex: 1, height: '44px', fontWeight: 700, borderRadius: '9999px', textTransform: 'none', boxShadow: 'none' }}
-                  >
-                    Continue
-                  </button>
-                  <button 
-                    onClick={() => setShowAuthModal(false)}
-                    className="btn btn-secondary"
-                    style={{ 
-                      flex: 1, 
-                      height: '44px', 
-                      borderRadius: '9999px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      textTransform: 'none'
-                    }}
-                  >
-                    Cancel
-                  </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <button 
+                        onClick={() => setShowAuthModal(false)}
+                        style={{ background: 'transparent', border: 'none', color: '#8ab4f8', fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem 0' }}
+                      >
+                        Create account
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (authEmail) setAuthStep('permissions');
+                        }}
+                        style={{ 
+                          backgroundColor: '#8ab4f8', 
+                          color: '#202124', 
+                          border: 'none', 
+                          borderRadius: '9999px', 
+                          padding: '0.5rem 1.5rem', 
+                          fontSize: '0.875rem', 
+                          fontWeight: 500, 
+                          cursor: 'pointer' 
+                        }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
               <>
-                {/* Shield Check Icon for Google Permission Granting */}
-                <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(31, 164, 232, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid var(--accent)' }}>
-                    <ShieldCheck size={32} style={{ color: 'var(--accent)' }} />
+                {/* Step 2: Password Mock */}
+                {/* Left Side: Brand & Title */}
+                <div style={{ flex: '1', paddingRight: '2rem', display: 'flex', flexDirection: 'column', paddingTop: '1rem' }}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.25rem' }}>
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                  </svg>
+                  <h1 style={{ fontSize: '2.25rem', fontWeight: 400, color: '#f1f3f4', margin: '0 0 1rem 0' }}>Hi {authEmail.split('@')[0]}</h1>
+                  
+                  <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #5f6368', borderRadius: '9999px', padding: '0.25rem 0.5rem 0.25rem 0.25rem', width: 'fit-content' }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#8ab4f8', color: '#1f1f1f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold', marginRight: '0.5rem' }}>
+                      {authEmail.charAt(0).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: '0.875rem', color: '#e8eaed' }}>{authEmail}</span>
                   </div>
                 </div>
 
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Google OAuth Permissions</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                  HydraSEO wants to access your Google Account (<b>{authEmail}</b>) for your new registration.
-                </p>
-
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem', textAlign: 'left', backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
-                    <input type="checkbox" defaultChecked disabled style={{ accentColor: 'var(--accent)', marginTop: '0.2rem' }} />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                      <b>openid, profile, email</b><br />
-                      <span style={{ color: 'var(--text-secondary)' }}>View your basic account profile name, email, and avatar photo.</span>
-                    </span>
+                {/* Right Side: Password Input & Actions */}
+                <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingTop: '1.5rem' }}>
+                  
+                  <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+                    <div style={{ 
+                      border: '1px solid #8ab4f8', 
+                      borderRadius: '4px', 
+                      padding: '0.75rem 1rem',
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      boxShadow: '0 0 0 1px #8ab4f8'
+                    }}>
+                      <label style={{ 
+                        position: 'absolute', 
+                        top: '-10px', 
+                        left: '10px', 
+                        backgroundColor: '#1f1f1f', 
+                        padding: '0 4px', 
+                        fontSize: '0.75rem', 
+                        color: '#8ab4f8' 
+                      }}>
+                        Enter your password
+                      </label>
+                      <input 
+                        type="password"
+                        value={authName} // reusing authName as the password state since it's just a mock
+                        onChange={(e) => setAuthName(e.target.value)}
+                        onKeyDown={(e) => { if(e.key === 'Enter') handleLogin(authEmail, authEmail.split('@')[0]) }}
+                        style={{ 
+                          width: '100%', 
+                          background: 'transparent', 
+                          border: 'none', 
+                          outline: 'none', 
+                          color: '#e8eaed', 
+                          fontSize: '1rem' 
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                    <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input type="checkbox" id="showPwd" style={{ accentColor: '#8ab4f8' }} />
+                      <label htmlFor="showPwd" style={{ color: '#e8eaed', fontSize: '0.875rem' }}>Show password</label>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                    <input type="checkbox" defaultChecked style={{ accentColor: 'var(--accent)', marginTop: '0.2rem' }} />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                      <b>drive.appdata</b> (Technical Audits)<br />
-                      <span style={{ color: 'var(--text-secondary)' }}>Save, sync, and retrieve your Technical SEO & Core Web Vitals reports.</span>
-                    </span>
-                  </div>
-                </div>
 
-                <div style={{ display: 'flex', width: '100%', gap: '0.75rem' }}>
-                  <button 
-                    onClick={() => handleLogin(authEmail, authName)}
-                    className="btn"
-                    style={{ flex: 1, height: '44px', fontWeight: 700, borderRadius: '9999px', textTransform: 'none', boxShadow: 'none' }}
-                  >
-                    Grant & Complete Sign Up
-                  </button>
-                  <button 
-                    onClick={() => setAuthStep('credentials')}
-                    className="btn btn-secondary"
-                    style={{ 
-                      flex: 1, 
-                      height: '44px', 
-                      borderRadius: '9999px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      textTransform: 'none'
-                    }}
-                  >
-                    Back
-                  </button>
+                  <div>
+                    <p style={{ fontSize: '0.875rem', color: '#9aa0a6', lineHeight: '1.5', marginBottom: '2.5rem' }}>
+                      Before using this app, you can review HydraSEO&apos;s <a href="#" style={{ color: '#8ab4f8', textDecoration: 'none' }}>Privacy Policy</a> and <a href="#" style={{ color: '#8ab4f8', textDecoration: 'none' }}>Terms of Service</a>.
+                    </p>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <button 
+                        onClick={() => setAuthStep('credentials')}
+                        style={{ background: 'transparent', border: 'none', color: '#8ab4f8', fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem 0' }}
+                      >
+                        Try another way
+                      </button>
+                      <button 
+                        onClick={() => handleLogin(authEmail, authEmail.split('@')[0] || 'User')}
+                        style={{ 
+                          backgroundColor: '#8ab4f8', 
+                          color: '#202124', 
+                          border: 'none', 
+                          borderRadius: '9999px', 
+                          padding: '0.5rem 1.5rem', 
+                          fontSize: '0.875rem', 
+                          fontWeight: 500, 
+                          cursor: 'pointer' 
+                        }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
           </div>
+        </div>
+      )}
+
       {/* 💳 Pro Premium Packages Billing Modal */}
       {showUpgradeModal && (
         <div className="drawer-backdrop" onClick={() => { setShowUpgradeModal(false); setAbuseBlockMessage(''); }}>
@@ -2443,9 +2560,6 @@ export default function Home() {
             </div>
 
           </div>
-        </div>
-      )}
-
         </div>
       )}
 
