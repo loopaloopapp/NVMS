@@ -1,133 +1,197 @@
-# 🚀 HydraSEO - Next.js Metadata Visibility Scanner
-### *Dual-Phase SEO Visibility Auditor & simulated Insights performance suite.*
+# 🐉 HydraSEO
+### *The All-in-One AI & Technical SEO Intelligence Platform*
 
-🌐 **Live Production Link**: [https://nvms-v8ec.onrender.com](https://nvms-v8ec.onrender.com)
-
-**HydraSEO** is a professional, high-performance technical SEO auditing platform built with **Next.js**. Its core mission is to crawl, identify, and report pages in any Next.js site where critical SEO metadata (such as `<title>`, `description`, `canonical`, `robots`, `Open Graph`, and `Twitter Cards`) are missing from the initial server-rendered HTML response and are instead injected later on the client-side via JavaScript. 
-
-This behavior poses a severe risk for technical SEO, as search engine crawlers (like Googlebot) may fail to accurately index or interpret client-rendered tags due to hydration delays.
-
-Additionally, **HydraSEO** integrates a robust, simulated Insights-inspired diagnostic suite that measures real-time browser performance metrics (Core Web Vitals) and performs accessibility and best practices checks.
+> **Repository**: [loopaloopapp/HydraSEO](https://github.com/loopaloopapp/HydraSEO)  
+> **Stack**: Next.js 16 · TypeScript · Playwright · Neon DB · Lucide Icons
 
 ---
 
-## 🌟 Core Features
+## 🌟 What is HydraSEO?
 
-### 🔍 1. Dual-Phase Visiblity Scanner (SSR vs CSR)
-*   **Server-Side Phase**: Scrapes the raw HTML payload returned directly from the server, mimicking the official `Googlebot/2.1` User Agent.
-*   **Client-Side Phase**: Spawns a headless **Playwright (Chromium)** browser to execute all Javascript logic, wait for `networkidle`, and capture the post-hydration rendered DOM.
-*   **Interactive Diff Viewer**: Performs a head-to-head field comparison to instantly pinpoint missing, mutated, or delayed metadata tags.
+**HydraSEO** is a professional, multi-module SEO intelligence platform that covers the full visibility spectrum — from traditional technical crawling to AI-native presence and generative search gap analysis. Three specialized tools, one unified interface.
 
-### ⚡ 2. Core Web Vitals & Timing Diagnostics
-Measures real-user experience timings using in-browser APIs (`window.performance`):
-*   **Time to First Byte (TTFB)**: Server responsiveness (Optimal: < 200ms).
-*   **First Contentful Paint (FCP)**: The duration before the first visual content renders on screen (Optimal: < 1s).
-*   **DOM Interactive Time**: The time taken for the DOM structure to become fully clickable and interactive.
-*   **Cumulative Layout Shift (CLS)**: Visual layout stability score during page load.
-
-### 🎨 3. Lighthouse Gauges & Dynamic Audits Checklist
-*   **Lighthouse CSS Gauges**: Four premium, animatable conic-gradient rings indicating scores (0-100) for *Performance*, *Accessibility*, *Best Practices*, and *SEO*.
-*   **Passed & Failed Audits**: A collapsible, interactive checklist showing specific diagnostic audits (e.g. single `H1` tag presence, viewport configurations, HTML `lang` attributes, and target character limits).
-*   **Adaptive Button Highlights**: The audit inspection buttons dynamically change color (Green, Yellow, Red) based on the overall quality scores of the analyzed page.
-
-### 💾 4. Seamless Data Export & Premium XML Sitemap Generator
-*   **JSON & CSV Export**: Export comprehensive scan metrics, risk index results, and audit checklists in one click for offline processing or reporting.
-*   **Premium XML Sitemap Generator**: Dynamically compile and generate a standard-compliant, search-engine-ready `sitemap.xml` file. Page priorities (ranging from `0.5` to `1.0`) are automatically calculated based on our custom technical SEO rendering and performance scores, allowing developers to generate and deploy validated sitemaps in seconds!
+| Module | Description |
+|---|---|
+| 🔧 **Technical SEO Scan** | Deep crawl your site for metadata failures, CSR hydration gaps, and Core Web Vitals |
+| 🧠 **AI Presence Audit (AIO)** | Discover how ChatGPT, Gemini, Claude, and Perplexity describe and cite your brand |
+| 🌐 **GEO Lens** | Compare Google organic visibility vs AI generative citation coverage, query by query |
 
 ---
 
-## 🛠️ Technical Architecture & Modules
+## 🔧 Module 1 — Technical SEO Scan
 
-The project follows highly modular software engineering standards under `/src`:
+Crawls your site using a dual-phase SSR + CSR pipeline to identify pages where critical SEO metadata is missing from the initial server-rendered HTML.
 
-1.  **Crawler & Queue Management (`src/lib/crawler/`)**:
-    *   `discovery.ts`: Scrapes the initial Cheerio-parsed DOM to extract, clean, and queue internal anchor links for Breadth-First Search (BFS) crawling.
-2.  **Analysis Engine (`src/lib/analyzer/`)**:
-    *   `fetchInitialHtml.ts`: Simple raw network client for standard SSR extraction.
-    *   `renderWithBrowser.ts`: Playwright engine equipped with **self-healing browser exception handling**. If the server's OS lacks updated dynamic graphics libraries (like legacy `ffmpeg` on macOS), it gracefully catches the error and applies simulated metrics, preventing `500 Server Errors`.
-3.  **Metadata Extraction (`src/lib/extractors/`)**:
-    *   `headMetadata.ts`: Parses and collects `<head>` elements (og, twitter, hreflang, robots, canonical, JSON-LD, etc.).
-    *   `lighthouseAudits.ts`: An heuristic execution module to generate scores for Lighthouse suites.
-4.  **Risk Scoring Engine (`src/lib/scoring/`)**:
-    *   `seoRiskScore.ts`: Translates metadata failures and excessive CSR reliance into a risk index ranging from 0 (Perfect) to 10+ (Critical).
+### Key Features
+- **Dual-Phase Scanner**: Compares raw server HTML (via `Googlebot/2.1` UA) against post-hydration Playwright DOM captures
+- **Metadata Diff Viewer**: Side-by-side `<title>`, `description`, `canonical`, `robots`, Open Graph, Twitter Cards comparison
+- **Core Web Vitals**: TTFB, FCP, DOM Interactive, CLS measurements via `window.performance` APIs
+- **Lighthouse-style Gauges**: Animated conic-gradient rings for Performance, Accessibility, Best Practices, SEO (0–100)
+- **Risk Score Engine**: Translates metadata failures and CSR hydration delays into a 0–10+ risk index
+- **Ignore Routes**: Skip `/api`, `/admin`, `/login`, `/_next` and any custom paths
+- **JSON & CSV Export**: Download full scan reports for offline reporting
+- **XML Sitemap Generator**: Auto-calculates page priorities from SEO scores and exports a valid `sitemap.xml`
+- **Robots.txt Generator**: One-click generation of a Google-compliant `robots.txt` that grants full access to all major AI indexers (GPTBot, ClaudeBot, Gemini, Perplexity, Copilot)
 
 ---
 
-## ⚙️ Audit Configuration & Parameters
+## 🧠 Module 2 — AI Presence Audit (AIO)
 
-The dashboard provides a powerful, professional configuration suite under **Audit Configuration** to customize the behavior of the discovery crawler and the scoring algorithms.
+Discover how AI platforms position, describe, and cite your brand in generative responses — from Share of Voice to narrative sentiment mapping.
 
-### 📊 Configuration Options Explained:
+### Key Features
+- **Multi-Engine Analysis**: Queries ChatGPT (GPT-4o), Gemini 1.5 Pro, Claude 3.5 Sonnet, Perplexity AI, and Microsoft Copilot
+- **Share of Voice Score**: Measures how often your brand appears vs competitors across AI-generated responses
+- **Sentiment & Narrative Map**: Categorizes brand mentions as Positive, Neutral, or Negative with context snippets
+- **Top Cited Prompts**: Shows which queries drive the most AI brand visibility
+- **Entity Coverage Breakdown**: Tracks which brand attributes (pricing, features, reviews, integrations) are cited by AI models
+- **Competitive Positioning Matrix**: Compares your brand's AI presence against up to 5 competitors
+- **Brand Safety Flags**: Highlights potentially damaging narratives or factual errors in AI responses
+- **PDF Export**: Full audit report printable or downloadable
 
-#### 1. 📄 Maximum Pages to Scan
-*   **Utility**: Defines the absolute depth limit for the crawler's Breadth-First Search (BFS) queue.
-*   **How to Use**: Set a small number (e.g., `5` to `10`) for a quick performance snapshot or single-page audit. Increase the limit (e.g., `50+` pages) to perform a comprehensive full-domain crawl of complex directories.
+---
 
-#### 2. 🔒 Restrict to the Same Domain
-*   **Utility**: Prevents the crawler from wandering off-site into external dependencies, tracking scripts, or social media links.
-*   **How to Use**: Keep this **checked** (active) to ensure the crawler only targets and analyzes pages sharing the exact same hostname as the initial target domain. Uncheck only if you explicitly intend to audit cross-domain pathways.
+## 🌐 Module 3 — GEO Lens (Organic vs AI Visibility)
 
-#### 3. 🛡️ Exclude Query Parameters
-*   **Utility**: Normalizes target URLs by stripping all query parameters (e.g., `?utm_source=...`, `?ref=...`) prior to analysis and crawling.
-*   **How to Use**: Keep this **checked** to avoid duplicate scans of identical pages (which creates rendering bottlenecks and inflates resource usage). Uncheck if query parameters dynamically render distinct content layouts that require individual technical audits.
+A comparative operational dashboard that maps your Google Search Console organic performance against AI generative search citation coverage, query by query.
 
-#### 4. 🚫 Ignore Routes & Paths
-*   **Utility**: Specifies a comma-separated list of route patterns or paths that the crawler must completely bypass (e.g., `/api, /admin, /login, /_next`).
-*   **How to Use**: Input paths you wish to skip (such as backend API endpoints, administrative dashboards, authentication routes, or Next.js internal folders) to optimize scan execution speed and prevent scanning secure/non-public sections of the site.
+### Key Features
+- **GSC CSV Import**: Upload your Google Search Console query export — auto-detects the query column and parses all rows
+- **GEO Gap Index**: Proprietary metric combining SEO opportunity score, organic demand, and AI citation density to surface the highest-impact gaps
+- **Comparative Query Matrix**: Full table of your target queries with Google position, organic clicks, AI citations found, gap score, and recommended action
+- **Engine Citation Breakdown**: Coverage rate per AI engine (Perplexity, ChatGPT, Gemini, Claude, Copilot)
+- **Dynamic Query Clustering**: Automatically classifies queries into Navigational, Comparison, Transactional, and Informational clusters with computed avg position and AI coverage
+- **Entity Mapping**: Tracks which brand entities (homepage, pricing, FAQ, features, comparisons) are cited by generative engines — and which are critically absent
+- **Opportunity Map**: Visualizes high-impact, low-coverage queries to prioritize GEO optimization efforts
+- **PDF Export**: Print-optimized full dashboard export
 
-#### 5. 🚀 Estimated Daily Queries / Traffic
-*   **Utility**: Instructs HydraSEO's architectural diagnostics engine about the daily query and request volume handled by the audited server.
-*   **How to Use**: Input your site's average daily page views or server queries. If set to a high-volume threshold (**10,000+ daily queries**), the dashboard automatically triggers custom, real-time performance optimization recommendations. It evaluates server-side CPU limits and advises on the adoption of high-speed pre-compiled DOM query engines like **NWSAPI** to reduce Time to First Byte (TTFB) and compute costs.
+---
+
+## 🤖 Robots.txt Generator
+
+Available from the header of every page. Generates a production-ready `robots.txt` that:
+- Grants full crawl access to Googlebot and all standard bots
+- Explicitly allows all major AI indexers for maximum generative search citation potential:
+  - `GPTBot`, `ChatGPT-User`, `OAI-SearchBot` (OpenAI)
+  - `ClaudeBot`, `Claude-Web` (Anthropic)
+  - `Google-Extended` (Gemini training)
+  - `PerplexityBot`
+  - `Applebot-Extended`, `Cohere-cohere`, `FacebookBot`
+- Disallows `/api/`, `/admin/`, `/login/`, `/_next/`
+- Includes `Sitemap:` reference for your domain
+
+---
+
+## 🛠️ Technical Architecture
+
+```
+/src
+  /app
+    page.tsx              → Technical SEO Scan (/)
+    /aio/page.tsx         → AI Presence Audit (/aio)
+    /geo/page.tsx         → GEO Lens Dashboard (/geo)
+    /upgrade/page.tsx     → Plan upgrade page
+    /api
+      /analyze            → SSR + Playwright crawler API
+      /aioAnalyze         → AI brand presence engine
+      /geoAnalyze         → GEO gap index calculator
+      /syncUser           → Neon DB user sync
+  /lib
+    /crawler/discovery.ts       → BFS link queue & URL normalization
+    /analyzer/fetchInitialHtml  → Raw server-side HTML extraction
+    /analyzer/renderWithBrowser → Playwright headless engine (self-healing)
+    /extractors/headMetadata    → <head> element parser
+    /extractors/lighthouseAudits → Heuristic Lighthouse score generator
+    /scoring/seoRiskScore       → Risk index calculator (0–10+)
+```
+
+---
+
+## ⚙️ Scan Configuration Options
+
+| Option | Description |
+|---|---|
+| Maximum Pages to Scan | BFS crawl depth limit (5 for quick audits, 50+ for full domain) |
+| Restrict to Same Domain | Only crawl pages on the same hostname |
+| Exclude Query Parameters | Deduplicate URLs by stripping `?utm_*` and similar params |
+| Ignore Routes & Paths | Skip `/api`, `/admin`, `/login`, custom paths |
+| Estimated Daily Traffic | Enables high-volume performance recommendations (10k+ threshold) |
 
 ---
 
 ## 🚀 Installation & Local Setup
 
-Make sure you have **NodeJS >= 20** installed on your local machine.
+> Requires **Node.js ≥ 20**
 
-### 1. Clone the repository and install dependencies
+### 1. Clone and install
+
 ```bash
-git clone https://github.com/loopaloopapp/NVMS.git
-cd NVMS
+git clone https://github.com/loopaloopapp/HydraSEO.git
+cd HydraSEO
 npm install
 ```
 
-### 2. Install Playwright Headless Browsers
-Install Playwright's headless Chromium binaries:
+### 2. Install Playwright browsers
+
 ```bash
 npx playwright install chromium
 ```
 
-### 3. Spin up the development server
+### 3. Configure environment
+
+Create a `.env.local` file:
+
+```env
+DATABASE_URL=your_neon_db_connection_string
+```
+
+### 4. Start the dev server
+
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) inside your browser and start scanning pages!
+
+Open [http://localhost:3000](http://localhost:3000) and start scanning.
 
 ---
 
-## 🐳 Cloud Deployment & Docker
+## 🐳 Deployment
 
-The repository includes a production-ready [Dockerfile](file:///Users/lucaperini/Desktop/NMVS/Dockerfile) that leverages Microsoft's official Playwright image (pre-configured with all system and browser dependencies).
+### Deploy to Render.com *(Recommended — enables live Playwright crawls)*
 
-### 🌐 Live Production Deployment (Render)
+1. Go to [Render.com](https://render.com/) and log in with your GitHub account
+2. Click **New +** → **Web Service**
+3. Connect `loopaloopapp/HydraSEO`
+4. Set Runtime to **Docker** (auto-detects the root `Dockerfile`)
+5. Set your `DATABASE_URL` environment variable
+6. Click **Create Web Service**
 
-The project is configured and hosted live at:
-👉 **[https://nvms-v8ec.onrender.com](https://nvms-v8ec.onrender.com)**
+### Deploy to Vercel *(Recommended for UI-only hosting)*
 
-### Deploy to Render.com (Recommended for Active Scans)
-1. Go to [Render.com](https://render.com/) and log in with your GitHub account.
-2. Click **New +** $\rightarrow$ **Web Service**.
-3. Select and connect this repository (`loopaloopapp/NVMS`).
-4. Set the **Runtime** to **Docker** (Render will automatically detect the root `Dockerfile` powered by the Microsoft Playwright environment).
-5. Choose a tier and click **Create Web Service**. Render will automatically build the container and deploy the active Playwright web crawler online!
+1. Import `loopaloopapp/HydraSEO` to [Vercel.com](https://vercel.com/)
+2. Add `DATABASE_URL` in environment settings
+3. Click **Deploy**
 
-### Deploy to Vercel (Recommended for UI Hosting)
-1. Import your GitHub repository to [Vercel.com](https://vercel.com/).
-2. Click **Deploy**.
-3. *Vercel hosts the front-end for free. When performing scans, the app's self-healing fallback will automatically activate to showcase all performance gauges and UI components.*
+> ⚠️ On Vercel, the Playwright headless crawler falls back to a self-healing simulated mode — all UI components, gauges, and dashboards remain fully functional.
+
+---
+
+## 📋 User Plans
+
+| Plan | Scans | Features |
+|---|---|---|
+| Free Tier | 1 scan | All 3 modules, basic reports |
+| Pro (100) | 100 scans | Full reports, PDF export, priority support |
+| Pro (500) | 500 scans | All Pro features |
+| Pro (1000) | 1,000 scans | All Pro features |
+| Ultimate | Unlimited | All features, unlimited scans |
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License. Feel free to modify and adapt.
+
+MIT License — free to modify, fork, and adapt.
+
+---
+
+*Built with ❤️ using Next.js, TypeScript, Playwright, and Neon DB.*
