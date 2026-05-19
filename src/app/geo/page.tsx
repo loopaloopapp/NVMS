@@ -354,113 +354,125 @@ export default function GeoPage() {
       </div>
 
       {/* GEO Lens Input Form Card */}
-      <div className="card print-exclude" style={{ borderLeft: '4px solid var(--accent)' }}>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <Globe size={20} style={{ color: 'var(--accent)' }} />
+      {geoResults ? (
+        <div className="card print-exclude" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', flexWrap: 'wrap', gap: '1rem', borderLeft: '4px solid var(--accent)' }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>GEO Lens: Organic vs AI Visibility Audit</h2>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-              Map citations, identify informational gaps, and compare Google organic clicks with generative responses.
-            </p>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>GEO Lens Target Brand</span>
+            <strong style={{ display: 'block', fontSize: '1.1rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{brandName || 'Audited Brand'} vs {brandCompetitors || 'Competitors'}</strong>
           </div>
-        </div>
-
-        {/* Operating Template Steps */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '0.75rem' }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 1: Export GSC Data</span>
-            <span style={{ color: 'var(--text-secondary)' }}>Download query list and landing pages from Google Search Console.</span>
-          </div>
-          <div style={{ fontSize: '0.75rem' }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 2: Input Target Queries</span>
-            <span style={{ color: 'var(--text-secondary)' }}>Upload your GSC log file or paste target queries in the field below.</span>
-          </div>
-          <div style={{ fontSize: '0.75rem' }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 3: Analyze GEO Gaps</span>
-            <span style={{ color: 'var(--text-secondary)' }}>Compute the GEO Gap Index highlighting high-opportunity visibility gaps.</span>
-          </div>
-        </div>
-
-        {/* Form Container */}
-        <div className="grid-mobile-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-          {/* Column 1: CSV upload */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                <label>Main Brand</label>
-                <input type="text" className="input" placeholder="e.g. HydraSEO" value={brandName} onChange={(e) => setBrandName(e.target.value)} />
-              </div>
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                <label>Main Competitor</label>
-                <input type="text" className="input" placeholder="e.g. Semrush" value={brandCompetitors} onChange={(e) => setBrandCompetitors(e.target.value)} />
-              </div>
-            </div>
-
-            <div 
-              onClick={handleMockCsvUpload}
-              style={{
-                border: '2px dashed var(--border)',
-                borderRadius: '16px',
-                padding: '2rem 1.5rem',
-                textAlign: 'center',
-                backgroundColor: 'var(--bg-tertiary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.75rem'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
-              onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
-            >
-              <Upload size={24} style={{ color: 'var(--accent)' }} />
-              <div>
-                <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600 }}>
-                  {geoGscFileName ? geoGscFileName : 'Click to Upload GSC Queries Export'}
-                </span>
-                <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                  Supports GSC exported CSV files, or click to load sample queries.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Column 2: Query list textarea */}
-          <div className="form-group" style={{ display: 'flex', flexDirection: 'column', height: '100%', marginBottom: 0 }}>
-            <label>Query List (one per line)</label>
-            <textarea
-              className="input"
-              style={{ flex: 1, minHeight: '140px', fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
-              placeholder="e.g.&#10;best cloud platform for startup&#10;best edge compute databases&#10;how to optimize metadata for LLM crawlers"
-              value={geoQueriesInput}
-              onChange={(e) => setGeoQueriesInput(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
-          <button
-            className="btn"
-            onClick={startGeoScan}
-            disabled={!geoQueriesInput || isScanningGeo}
-            style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem', backgroundColor: 'var(--accent)', color: '#0a0e15', boxShadow: '0 4px 12px rgba(31, 164, 232, 0.25)' }}
-          >
-            {isScanningGeo ? (
-              <>
-                <Square size={16} fill="currentColor" />
-                Analyzing GEO gap metrics...
-              </>
-            ) : (
-              <>
-                <Play size={16} fill="currentColor" />
-                Run GEO Lens Analysis
-              </>
-            )}
+          <button className="btn btn-secondary" onClick={() => setGeoResults(null)} style={{ borderRadius: '9999px', fontSize: '0.75rem', height: '36px' }}>
+            Configure New Analysis
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="card print-exclude" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <Globe size={20} style={{ color: 'var(--accent)' }} />
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>GEO Lens: Organic vs AI Visibility Audit</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                Map citations, identify informational gaps, and compare Google organic clicks with generative responses.
+              </p>
+            </div>
+          </div>
+
+          {/* Operating Template Steps */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 1: Export GSC Data</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Download query list and landing pages from Google Search Console.</span>
+            </div>
+            <div style={{ fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 2: Input Target Queries</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Upload your GSC log file or paste target queries in the field below.</span>
+            </div>
+            <div style={{ fontSize: '0.75rem' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 3: Analyze GEO Gaps</span>
+              <span style={{ color: 'var(--text-secondary)' }}>Compute the GEO Gap Index highlighting high-opportunity visibility gaps.</span>
+            </div>
+          </div>
+
+          {/* Form Container */}
+          <div className="grid-mobile-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            {/* Column 1: CSV upload */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>Main Brand</label>
+                  <input type="text" className="input" placeholder="e.g. HydraSEO" value={brandName} onChange={(e) => setBrandName(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>Main Competitor</label>
+                  <input type="text" className="input" placeholder="e.g. Semrush" value={brandCompetitors} onChange={(e) => setBrandCompetitors(e.target.value)} />
+                </div>
+              </div>
+
+              <div 
+                onClick={handleMockCsvUpload}
+                style={{
+                  border: '2px dashed var(--border)',
+                  borderRadius: '16px',
+                  padding: '2rem 1.5rem',
+                  textAlign: 'center',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.75rem'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
+                onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <Upload size={24} style={{ color: 'var(--accent)' }} />
+                <div>
+                  <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600 }}>
+                    {geoGscFileName ? geoGscFileName : 'Click to Upload GSC Queries Export'}
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                    Supports GSC exported CSV files, or click to load sample queries.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: Query list textarea */}
+            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', height: '100%', marginBottom: 0 }}>
+              <label>Query List (one per line)</label>
+              <textarea
+                className="input"
+                style={{ flex: 1, minHeight: '140px', fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
+                placeholder="e.g.&#10;best cloud platform for startup&#10;best edge compute databases&#10;how to optimize metadata for LLM crawlers"
+                value={geoQueriesInput}
+                onChange={(e) => setGeoQueriesInput(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+            <button
+              className="btn"
+              onClick={startGeoScan}
+              disabled={!geoQueriesInput || isScanningGeo}
+              style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem', backgroundColor: 'var(--accent)', color: '#0a0e15', boxShadow: '0 4px 12px rgba(31, 164, 232, 0.25)' }}
+            >
+              {isScanningGeo ? (
+                <>
+                  <Square size={16} fill="currentColor" />
+                  Analyzing GEO gap metrics...
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  Run GEO Lens Analysis
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* GEO Progress loader */}
       {isScanningGeo && (

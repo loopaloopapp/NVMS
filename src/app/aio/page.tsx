@@ -342,117 +342,129 @@ export default function AioPage() {
       </div>
 
       {/* AIO Config Card */}
-      <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <Brain size={18} style={{ color: 'var(--accent)' }} />
+      {aioResults ? (
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', flexWrap: 'wrap', gap: '1rem', borderLeft: '4px solid var(--success)' }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>AI Presence & Brand Search Configuration (AIO)</h2>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-              Discover how AI platforms (from ChatGPT to Gemini) position and talk about your brand online.
-            </p>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Audited Brand Target</span>
+            <strong style={{ display: 'block', fontSize: '1.1rem', color: 'var(--text-primary)', marginTop: '0.15rem' }}>{brandName} ({brandIndustry})</strong>
           </div>
-        </div>
-
-        <div className="grid-mobile-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Brand Name</label>
-            <input 
-              type="text" 
-              className="input" 
-              placeholder="e.g. HydraSEO"
-              value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
-              disabled={isScanningAio}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Official Website</label>
-            <input 
-              type="text" 
-              className="input" 
-              placeholder="e.g. https://hydraseo.com (optional)"
-              value={brandUrl}
-              onChange={(e) => setBrandUrl(e.target.value)}
-              disabled={isScanningAio}
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Sector / Product Category</label>
-            <input 
-              type="text" 
-              className="input" 
-              placeholder="e.g. SEO Tools, SaaS, E-commerce..."
-              value={brandIndustry}
-              onChange={(e) => setBrandIndustry(e.target.value)}
-              disabled={isScanningAio}
-            />
-          </div>
-        </div>
-
-        <div className="grid-mobile-stack-row-end" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Main Competitors (comma separated)</label>
-            <input 
-              type="text" 
-              className="input" 
-              placeholder="e.g. Screaming Frog, Ahrefs, Semrush"
-              value={brandCompetitors}
-              onChange={(e) => setBrandCompetitors(e.target.value)}
-              disabled={isScanningAio}
-            />
-          </div>
-          <button 
-            className="btn" 
-            onClick={startAioScan}
-            disabled={!brandName || !brandIndustry || isScanningAio}
-            style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem', backgroundColor: 'var(--success)', color: '#0a0e15', boxShadow: '0 4px 12px rgba(122, 194, 112, 0.25)' }}
-          >
-            {isScanningAio ? (
-              <>
-                <Square size={16} fill="currentColor" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Play size={16} fill="currentColor" />
-                Start AI Analysis
-              </>
-            )}
+          <button className="btn btn-secondary" onClick={() => setAioResults(null)} style={{ borderRadius: '9999px', fontSize: '0.75rem', height: '36px' }}>
+            Configure New Audit
           </button>
         </div>
+      ) : (
+        <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <Brain size={18} style={{ color: 'var(--accent)' }} />
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>AI Presence & Brand Search Configuration (AIO)</h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                Discover how AI platforms (from ChatGPT to Gemini) position and talk about your brand online.
+              </p>
+            </div>
+          </div>
 
-        {/* Engine Checkboxes */}
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            AI Models & LLMs to Query
-          </label>
-          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-            {[
-              { id: 'chatgpt', name: 'ChatGPT (GPT-4o)' },
-              { id: 'gemini', name: 'Gemini (1.5 Pro)' },
-              { id: 'claude', name: 'Claude (3.5 Sonnet)' },
-              { id: 'perplexity', name: 'Perplexity AI' },
-              { id: 'copilot', name: 'Microsoft Copilot' }
-            ].map(engine => (
-              <label key={engine.id} className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  checked={selectedAioEngines.includes(engine.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedAioEngines([...selectedAioEngines, engine.id]);
-                    } else {
-                      setSelectedAioEngines(selectedAioEngines.filter(id => id !== engine.id));
-                    }
-                  }}
-                  disabled={isScanningAio}
-                />
-                {engine.name}
-              </label>
-            ))}
+          <div className="grid-mobile-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Brand Name</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. HydraSEO"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Official Website</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. https://hydraseo.com (optional)"
+                value={brandUrl}
+                onChange={(e) => setBrandUrl(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Sector / Product Category</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. SEO Tools, SaaS, E-commerce..."
+                value={brandIndustry}
+                onChange={(e) => setBrandIndustry(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+          </div>
+
+          <div className="grid-mobile-stack-row-end" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Main Competitors (comma separated)</label>
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="e.g. Screaming Frog, Ahrefs, Semrush"
+                value={brandCompetitors}
+                onChange={(e) => setBrandCompetitors(e.target.value)}
+                disabled={isScanningAio}
+              />
+            </div>
+            <button 
+              className="btn" 
+              onClick={startAioScan}
+              disabled={!brandName || !brandIndustry || isScanningAio}
+              style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem', backgroundColor: 'var(--success)', color: '#0a0e15', boxShadow: '0 4px 12px rgba(122, 194, 112, 0.25)' }}
+            >
+              {isScanningAio ? (
+                <>
+                  <Square size={16} fill="currentColor" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  Start AI Analysis
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Engine Checkboxes */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              AI Models & LLMs to Query
+            </label>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+              {[
+                { id: 'chatgpt', name: 'ChatGPT (GPT-4o)' },
+                { id: 'gemini', name: 'Gemini (1.5 Pro)' },
+                { id: 'claude', name: 'Claude (3.5 Sonnet)' },
+                { id: 'perplexity', name: 'Perplexity AI' },
+                { id: 'copilot', name: 'Microsoft Copilot' }
+              ].map(engine => (
+                <label key={engine.id} className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedAioEngines.includes(engine.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedAioEngines([...selectedAioEngines, engine.id]);
+                      } else {
+                        setSelectedAioEngines(selectedAioEngines.filter(id => id !== engine.id));
+                      }
+                    }}
+                    disabled={isScanningAio}
+                  />
+                  {engine.name}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* AIO Progress Loader */}
       {isScanningAio && (

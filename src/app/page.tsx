@@ -560,125 +560,147 @@ Sitemap: https://${domain}/sitemap.xml`;
       </div>
 
       {/* Settings Form */}
-      <div className="card">
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <Settings size={18} style={{ color: 'var(--accent)' }} />
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Audit Configuration</h2>
-        </div>
-        
-        <div className="grid-mobile-stack-row-end" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="url-input">Initial Domain or URL</label>
-            <input 
-              type="text" 
-              id="url-input"
-              className="input" 
-              placeholder="https://example-nextjs-app.com"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              disabled={isScanning}
-            />
+      {results.length > 0 ? (
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', flexWrap: 'wrap', gap: '1rem', borderLeft: '4px solid var(--accent)' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Audited Target Domain</span>
+            <strong style={{ display: 'block', fontSize: '1.1rem', color: 'var(--text-primary)', fontFamily: 'monospace', marginTop: '0.15rem' }}>{urlInput}</strong>
           </div>
-          <button 
-            className="btn" 
-            onClick={handleScanToggle}
-            disabled={!urlInput}
-            style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem' }}
-          >
-            {isScanning ? (
-              <>
-                <Square size={16} fill="currentColor" />
-                Stop Audits
-              </>
-            ) : (
-              <>
-                <Play size={16} fill="currentColor" />
-                Start Scan
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Options & Robots.txt Generator side-by-side */}
-        <div className="grid-mobile-stack" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
-          {/* Options Panel (Left) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-            <div className="form-group">
-              <label>Maximum Pages to Scan</label>
-              <input 
-                type="number" 
-                className="input" 
-                value={options.limit} 
-                onChange={(e) => setOptions({...options, limit: Number(e.target.value)})}
-                disabled={isScanning}
-              />
-            </div>
-            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  checked={options.sameHostOnly} 
-                  onChange={(e) => setOptions({...options, sameHostOnly: e.target.checked})}
-                  disabled={isScanning}
-                />
-                Restrict to same domain
-              </label>
-            </div>
-            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <label className="checkbox-label">
-                <input 
-                  type="checkbox" 
-                  checked={options.excludeQueryString} 
-                  onChange={(e) => setOptions({...options, excludeQueryString: e.target.checked})}
-                  disabled={isScanning}
-                />
-                Exclude query parameters
-              </label>
-            </div>
-            <div className="form-group">
-              <label>Ignore Routes & Paths</label>
-              <input 
-                type="text" 
-                className="input" 
-                value={options.ignorePaths} 
-                onChange={(e) => setOptions({...options, ignorePaths: e.target.value})}
-                disabled={isScanning}
-              />
-            </div>
-            <div className="form-group">
-              <label>Estimated Daily Traffic</label>
-              <input 
-                type="number" 
-                className="input" 
-                value={options.estimatedQueries} 
-                onChange={(e) => setOptions({...options, estimatedQueries: Number(e.target.value)})}
-                disabled={isScanning}
-                min={1}
-              />
-            </div>
-          </div>
-
-          {/* Robots.txt Generator (Right) */}
-          <div style={{ display: 'flex', flexDirection: 'column', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '14px', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <FileText size={16} style={{ color: 'var(--accent)' }} />
-                Robots.txt Generator
-              </span>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>
-                Create a Google-compliant robots.txt file optimized to grant maximum visibility and crawl access to AI search engine indexers.
-              </p>
-            </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button 
               className="btn btn-secondary" 
               onClick={generateRobotsTxt}
-              style={{ width: '100%', borderRadius: '9999px', fontSize: '0.75rem', height: '36px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent' }}
+              style={{ borderRadius: '9999px', fontSize: '0.75rem', height: '36px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
             >
+              <FileText size={14} />
               Generate Robots.txt
+            </button>
+            <button className="btn btn-secondary" onClick={() => setResults([])} style={{ borderRadius: '9999px', fontSize: '0.75rem', height: '36px' }}>
+              Configure New Scan
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="card">
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <Settings size={18} style={{ color: 'var(--accent)' }} />
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Audit Configuration</h2>
+          </div>
+          
+          <div className="grid-mobile-stack-row-end" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="url-input">Initial Domain or URL</label>
+              <input 
+                type="text" 
+                id="url-input"
+                className="input" 
+                placeholder="https://example-nextjs-app.com"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                disabled={isScanning}
+              />
+            </div>
+            <button 
+              className="btn" 
+              onClick={handleScanToggle}
+              disabled={!urlInput}
+              style={{ height: '48px', gap: '0.5rem', borderRadius: '9999px', padding: '0 2.25rem' }}
+            >
+              {isScanning ? (
+                <>
+                  <Square size={16} fill="currentColor" />
+                  Stop Audits
+                </>
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" />
+                  Start Scan
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Options & Robots.txt Generator side-by-side */}
+          <div className="grid-mobile-stack" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
+            {/* Options Panel (Left) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Maximum Pages to Scan</label>
+                <input 
+                  type="number" 
+                  className="input" 
+                  value={options.limit} 
+                  onChange={(e) => setOptions({...options, limit: Number(e.target.value)})}
+                  disabled={isScanning}
+                />
+              </div>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={options.sameHostOnly} 
+                    onChange={(e) => setOptions({...options, sameHostOnly: e.target.checked})}
+                    disabled={isScanning}
+                  />
+                  Restrict to same domain
+                </label>
+              </div>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <label className="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    checked={options.excludeQueryString} 
+                    onChange={(e) => setOptions({...options, excludeQueryString: e.target.checked})}
+                    disabled={isScanning}
+                  />
+                  Exclude query parameters
+                </label>
+              </div>
+              <div className="form-group">
+                <label>Ignore Routes & Paths</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  value={options.ignorePaths} 
+                  onChange={(e) => setOptions({...options, ignorePaths: e.target.value})}
+                  disabled={isScanning}
+                />
+              </div>
+              <div className="form-group">
+                <label>Estimated Daily Traffic</label>
+                <input 
+                  type="number" 
+                  className="input" 
+                  value={options.estimatedQueries} 
+                  onChange={(e) => setOptions({...options, estimatedQueries: Number(e.target.value)})}
+                  disabled={isScanning}
+                  min={1}
+                />
+              </div>
+            </div>
+
+            {/* Robots.txt Generator (Right) */}
+            <div style={{ display: 'flex', flexDirection: 'column', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '14px', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <FileText size={16} style={{ color: 'var(--accent)' }} />
+                  Robots.txt Generator
+                </span>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>
+                  Create a Google-compliant robots.txt file optimized to grant maximum visibility and crawl access to AI search engine indexers.
+                </p>
+              </div>
+              <button 
+                className="btn btn-secondary" 
+                onClick={generateRobotsTxt}
+                style={{ width: '100%', borderRadius: '9999px', fontSize: '0.75rem', height: '36px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent' }}
+              >
+                Generate Robots.txt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SEO Progress */}
       {isScanning && (
