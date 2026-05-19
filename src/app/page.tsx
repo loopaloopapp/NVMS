@@ -148,6 +148,17 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('robots') === 'true') {
+        generateRobotsTxt();
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [urlInput]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
@@ -500,6 +511,15 @@ Sitemap: https://${domain}/sitemap.xml`;
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={generateRobotsTxt}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRadius: '9999px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', height: '38px', fontSize: '0.8rem', fontWeight: 600 }}
+          >
+            <FileText size={14} />
+            Generate Robots.txt
+          </button>
+
           <button 
             className="btn btn-secondary" 
             onClick={toggleTheme} 

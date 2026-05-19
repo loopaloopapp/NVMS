@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Play, Square, AlertCircle, AlertTriangle, CheckCircle, Info, 
@@ -267,9 +267,66 @@ export default function GeoPage() {
     }
   };
 
-  // Mock GSC CSV Upload
-  const handleMockCsvUpload = () => {
-    setGeoGscFileName('gsc_queries_export.csv');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGeoGscFileName(file.name);
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+      
+      const lines = text.split(/\r?\n/);
+      let queriesList: string[] = [];
+      let queryColIdx = 0;
+      
+      if (lines.length > 0) {
+        const firstLineCells = lines[0].split(',').map(c => c.trim().toLowerCase().replace(/"/g, ''));
+        const foundIdx = firstLineCells.findIndex(cell => cell.includes('query') || cell.includes('keyword') || cell.includes('parola'));
+        if (foundIdx !== -1) {
+          queryColIdx = foundIdx;
+        }
+      }
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        let cells: string[] = [];
+        if (line.includes('"')) {
+          cells = (line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || []).map(c => c.replace(/"/g, ''));
+        } else {
+          cells = line.split(',');
+        }
+        
+        const q = cells[queryColIdx]?.trim();
+        if (q && q !== '' && isNaN(Number(q))) {
+          queriesList.push(q);
+        }
+      }
+      
+      if (queriesList.length === 0) {
+        queriesList = lines.map(line => {
+          const cells = line.split(',');
+          return cells[0]?.replace(/"/g, '').trim();
+        }).filter(q => q && q.length > 0 && isNaN(Number(q)));
+      }
+      
+      setGeoQueriesInput(queriesList.join('\n'));
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvTrigger = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLoadSampleQueries = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setGeoGscFileName('sample_queries.csv');
     setGeoQueriesInput(
       'best cloud platform for startup\n' +
       'best edge compute databases\n' +
@@ -292,8 +349,16 @@ export default function GeoPage() {
             Compare organic search visibility with brand citation presence inside Generative Engines.
           </p>
         </div>
-
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => router.push('/?robots=true')}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRadius: '9999px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', height: '38px', fontSize: '0.8rem', fontWeight: 600 }}
+          >
+            <FileText size={14} />
+            Generate Robots.txt
+          </button>
+
           <button 
             className="btn btn-secondary" 
             onClick={toggleTheme} 
@@ -407,8 +472,15 @@ export default function GeoPage() {
                 </div>
               </div>
 
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleCsvFileChange} 
+                accept=".csv" 
+                style={{ display: 'none' }} 
+              />
               <div 
-                onClick={handleMockCsvUpload}
+                onClick={handleCsvTrigger}
                 style={{
                   border: '2px dashed var(--border)',
                   borderRadius: '16px',
@@ -431,8 +503,8 @@ export default function GeoPage() {
                   <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600 }}>
                     {geoGscFileName ? geoGscFileName : 'Click to Upload GSC Queries Export'}
                   </span>
-                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                    Supports GSC exported CSV files, or click to load sample queries.
+                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>
+                    Supports GSC exported CSV files. <span onClick={handleLoadSampleQueries} style={{ color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer', fontWeight: 600 }}>Or load sample queries</span>.
                   </span>
                 </div>
               </div>
