@@ -281,14 +281,6 @@ export default function AioPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => router.push('/?robots=true')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRadius: '9999px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', height: '38px', fontSize: '0.8rem', fontWeight: 600 }}
-          >
-            <FileText size={14} />
-            Generate Robots.txt
-          </button>
 
           <button 
             className="btn btn-secondary" 

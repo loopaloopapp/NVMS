@@ -136,7 +136,8 @@ export default function Home() {
 
         const syncedScans = localStorage.getItem(`hydraseo_user_scans_${parsedUser.email}`);
         if (syncedScans) {
-          setGlobalScanCount(Number(syncedScans));
+          const parsed = parseInt(syncedScans, 10);
+          if (!isNaN(parsed)) setGlobalScanCount(parsed);
         }
 
         fetch(`/api/syncUser?email=${encodeURIComponent(parsedUser.email)}`)
@@ -232,16 +233,22 @@ export default function Home() {
                          userPlan === 'Pro (1000 Scans)' ? 1000 : 
                          1;
 
-    if (globalScanCount >= currentLimit) {
-      if (userPlan === 'Free Tier') {
+    const safeCount = isNaN(globalScanCount) ? 0 : globalScanCount;
+
+    if (safeCount >= currentLimit) {
+      // Never block authenticated Pro/Ultimate users if count is clearly corrupted
+      if (currentLimit === Infinity) {
+        // Ultimate plan — always allow
+      } else if (userPlan === 'Free Tier') {
         setAbuseBlockMessage(`You have reached the free scan limit (1 scan). Please sign in with Google and upgrade to a Pro plan to continue.`);
         setShowAuthModal(true);
         setAuthStep('credentials');
-      } else {
+        return;
+      } else if (safeCount >= currentLimit) {
         setAbuseBlockMessage(`You have exhausted your active plan allowance of ${currentLimit} scans. Please purchase a new package.`);
         setShowUpgradeModal(true);
+        return;
       }
-      return;
     }
 
     setIsScanning(true);
@@ -513,15 +520,6 @@ Sitemap: https://${domain}/sitemap.xml`;
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button 
             className="btn btn-secondary" 
-            onClick={generateRobotsTxt}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRadius: '9999px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', height: '38px', fontSize: '0.8rem', fontWeight: 600 }}
-          >
-            <FileText size={14} />
-            Generate Robots.txt
-          </button>
-
-          <button 
-            className="btn btn-secondary" 
             onClick={toggleTheme} 
             style={{ padding: '0 0.75rem', width: '38px', height: '38px', borderRadius: '50%', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -699,24 +697,48 @@ Sitemap: https://${domain}/sitemap.xml`;
               </div>
             </div>
 
-            {/* Robots.txt Generator (Right) */}
-            <div style={{ display: 'flex', flexDirection: 'column', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '14px', justifyContent: 'space-between', gap: '0.75rem' }}>
-              <div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <FileText size={16} style={{ color: 'var(--accent)' }} />
-                  Robots.txt Generator
-                </span>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>
-                  Create a Google-compliant robots.txt file optimized to grant maximum visibility and crawl access to AI search engine indexers.
-                </p>
+            {/* Tools Panel (Right) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {/* Robots.txt Generator */}
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '14px', justifyContent: 'space-between', gap: '0.75rem', flex: 1 }}>
+                <div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <FileText size={16} style={{ color: 'var(--accent)' }} />
+                    Robots.txt Generator
+                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>
+                    Create a Google-compliant robots.txt optimized to grant full crawl access to AI indexers.
+                  </p>
+                </div>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={generateRobotsTxt}
+                  style={{ width: '100%', borderRadius: '9999px', fontSize: '0.75rem', height: '36px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent' }}
+                >
+                  Generate Robots.txt
+                </button>
               </div>
-              <button 
-                className="btn btn-secondary" 
-                onClick={generateRobotsTxt}
-                style={{ width: '100%', borderRadius: '9999px', fontSize: '0.75rem', height: '36px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent' }}
-              >
-                Generate Robots.txt
-              </button>
+
+              {/* Sitemap Generator */}
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '14px', justifyContent: 'space-between', gap: '0.75rem', flex: 1 }}>
+                <div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Map size={16} style={{ color: 'var(--success)' }} />
+                    XML Sitemap Generator
+                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>
+                    Generate a search-engine-ready sitemap.xml with auto-calculated page priorities.
+                  </p>
+                </div>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowSitemapModal(true)}
+                  disabled={results.length === 0}
+                  style={{ width: '100%', borderRadius: '9999px', fontSize: '0.75rem', height: '36px', border: `1px solid ${results.length > 0 ? 'var(--success)' : 'var(--border)'}`, color: results.length > 0 ? 'var(--success)' : 'var(--text-secondary)', background: 'transparent', opacity: results.length === 0 ? 0.5 : 1 }}
+                >
+                  {results.length > 0 ? 'Generate Sitemap.xml' : 'Run a scan first'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1074,8 +1096,8 @@ Sitemap: https://${domain}/sitemap.xml`;
               <Compass size={18} style={{ color: 'var(--accent)' }} />
               <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Your Scanner Account Quota</h3>
             </div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Active Package: <strong>{userPlan}</strong> | Total Scans Performed: <strong>{globalScanCount}</strong>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+              Active Package: <strong>{userPlan}</strong> | Total Scans Performed: <strong>{isNaN(globalScanCount) ? 0 : globalScanCount}</strong>
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

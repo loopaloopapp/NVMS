@@ -31,6 +31,8 @@ export default function GeoPage() {
   const [geoResults, setGeoResults] = useState<any | null>(null);
   const [geoSearchQuery, setGeoSearchQuery] = useState('');
   const [geoFilterGap, setGeoFilterGap] = useState('all');
+  const [geoSiteUrl, setGeoSiteUrl] = useState('');
+  const [isFetchingKeywords, setIsFetchingKeywords] = useState(false);
 
   // Monetization & Quota states
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -350,14 +352,6 @@ export default function GeoPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => router.push('/?robots=true')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0 1rem', borderRadius: '9999px', border: '1px solid var(--accent)', color: 'var(--accent)', background: 'transparent', height: '38px', fontSize: '0.8rem', fontWeight: 600 }}
-          >
-            <FileText size={14} />
-            Generate Robots.txt
-          </button>
 
           <button 
             className="btn btn-secondary" 
@@ -455,6 +449,55 @@ export default function GeoPage() {
               <span style={{ color: 'var(--accent)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Step 3: Analyze GEO Gaps</span>
               <span style={{ color: 'var(--text-secondary)' }}>Compute the GEO Gap Index highlighting high-opportunity visibility gaps.</span>
             </div>
+          </div>
+
+          {/* URL Keyword Extractor */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', alignItems: 'flex-end', padding: '1rem', backgroundColor: 'rgba(31,164,232,0.06)', border: '1px solid rgba(31,164,232,0.2)', borderRadius: '14px' }}>
+            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Globe size={13} style={{ color: 'var(--accent)' }} />
+                Extract Keywords from Website URL
+              </label>
+              <input
+                type="text"
+                className="input"
+                placeholder="e.g. https://poliricambi.com"
+                value={geoSiteUrl}
+                onChange={(e) => setGeoSiteUrl(e.target.value)}
+                disabled={isFetchingKeywords}
+              />
+            </div>
+            <button
+              className="btn"
+              disabled={!geoSiteUrl || isFetchingKeywords}
+              onClick={async () => {
+                setIsFetchingKeywords(true);
+                try {
+                  const urlToFetch = geoSiteUrl.startsWith('http') ? geoSiteUrl : `https://${geoSiteUrl}`;
+                  const res = await fetch(`/api/analyze?url=${encodeURIComponent(urlToFetch)}&limit=5&sameHostOnly=true&excludeQueryString=true`);
+                  const data = await res.json();
+                  const keywords: string[] = [];
+                  (data.pages || []).forEach((page: any) => {
+                    if (page.ssr?.title && !keywords.includes(page.ssr.title)) keywords.push(page.ssr.title);
+                    if (page.ssr?.description) {
+                      page.ssr.description.split(/[,.!?]/).map((s: string) => s.trim()).filter((s: string) => s.length > 8 && s.length < 80).forEach((k: string) => { if (!keywords.includes(k)) keywords.push(k); });
+                    }
+                  });
+                  if (keywords.length === 0 && data.pages?.length > 0) {
+                    keywords.push(...data.pages.slice(0, 8).map((p: any) => p.url?.replace(/^https?:\/\/[^/]+/, '') || '').filter(Boolean));
+                  }
+                  if (keywords.length > 0) setGeoQueriesInput(keywords.slice(0, 20).join('\n'));
+                  else setGeoQueriesInput('Could not extract keywords — try pasting them manually.');
+                } catch {
+                  setGeoQueriesInput('Extraction failed — paste your keywords manually.');
+                } finally {
+                  setIsFetchingKeywords(false);
+                }
+              }}
+              style={{ height: '44px', borderRadius: '9999px', padding: '0 1.5rem', whiteSpace: 'nowrap', backgroundColor: 'var(--accent)', color: '#0a0e15', fontSize: '0.8rem', fontWeight: 700, minWidth: '170px' }}
+            >
+              {isFetchingKeywords ? 'Extracting...' : '⚡ Extract from Site'}
+            </button>
           </div>
 
           {/* Form Container */}
@@ -789,17 +832,28 @@ export default function GeoPage() {
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-              {geoResults.entitiesMapping.map((entity: any) => (
-                <div key={entity.entityType} style={{ padding: '1rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {geoResults.entitiesMapping.map((entity: any, idx: number) => (
+                <div key={idx} style={{ padding: '1rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{entity.entityType}</span>
-                    <span className={`badge ${entity.frequency === 'HIGH FREQ' ? 'badge-ok' : entity.frequency === 'MEDIUM FREQ' ? 'badge-warning' : 'badge-critical'}`}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{entity.name}</span>
+                    <span className={`badge ${
+                      entity.frequency === 'Critical' ? 'badge-critical' :
+                      entity.frequency === 'Low' ? 'badge-warning' :
+                      entity.frequency === 'Medium' ? 'badge-warning' :
+                      'badge-ok'
+                    }`}>
                       {entity.frequency}
                     </span>
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{entity.details}</p>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: entity.status === 'STABLE' ? 'var(--success)' : entity.status === 'WARNING' ? 'var(--warning)' : 'var(--danger)', marginTop: '0.5rem' }}>
-                    STATUS: {entity.status}
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{entity.description}</p>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color:
+                    entity.status === 'stable' ? 'var(--success)' :
+                    entity.status === 'warning' ? 'var(--warning)' :
+                    entity.status === 'opportunity' ? 'var(--accent)' :
+                    'var(--danger)',
+                    marginTop: '0.5rem'
+                  }}>
+                    STATUS: {entity.status.toUpperCase()}
                   </span>
                 </div>
               ))}
