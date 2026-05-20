@@ -132,7 +132,9 @@ In summary, if processing speed is your top priority, we highly recommend trying
         citationStatus: 'cited',
         citationUrl: url || `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`,
         positioning: 'primary',
-        keyTakeaway: `${brandName} is positioned as the #1 primary recommendation with a strong focus on processing speed compared to legacy competitors.`
+        keyTakeaway: `${brandName} is positioned as the #1 primary recommendation with a strong focus on processing speed compared to legacy competitors.`,
+        mentionedCompetitors: [competitorList[0], competitorList[1]].filter(Boolean),
+        category: 'Technical Performance'
       },
       {
         id: 'p2',
@@ -147,7 +149,9 @@ Some users note that the interface of ${brandName} is slightly more technical co
         citationStatus: 'cited',
         citationUrl: url || `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`,
         positioning: 'primary',
-        keyTakeaway: `Excellent alternative positioning. ChatGPT highlights cost-efficiency and performance metrics without penalizing the brand.`
+        keyTakeaway: `Excellent alternative positioning. ChatGPT highlights cost-efficiency and performance metrics without penalizing the brand.`,
+        mentionedCompetitors: [competitorList[0]].filter(Boolean),
+        category: 'Cost Alternatives'
       },
       {
         id: 'p3',
@@ -165,7 +169,9 @@ However, some constructive feedback suggests a need for additional documentation
         citationStatus: 'missing',
         citationUrl: '',
         positioning: 'secondary',
-        keyTakeaway: `Highly positive technical sentiment, but Claude notes a missing backlink link and suggests improving comparison documentation.`
+        keyTakeaway: `Highly positive technical sentiment, but Claude notes a missing backlink link and suggests improving comparison documentation.`,
+        mentionedCompetitors: [competitorList[0]].filter(Boolean),
+        category: 'Sentiment & Reviews'
       },
       {
         id: 'p4',
@@ -183,7 +189,9 @@ For further information, you can browse practical setup guides directly on the o
         citationStatus: 'cited',
         citationUrl: url || `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`,
         positioning: 'primary',
-        keyTakeaway: `Perplexity generates clean, structured citations, fully recognizing the technical innovation and providing an active backlink.`
+        keyTakeaway: `Perplexity generates clean, structured citations, fully recognizing the technical innovation and providing an active backlink.`,
+        mentionedCompetitors: [competitorList[0]].filter(Boolean),
+        category: 'Brand Positioning'
       }
     ];
 
@@ -229,6 +237,28 @@ For further information, you can browse practical setup guides directly on the o
       }
     ];
 
+    const engineSoV = [
+      { engine: 'ChatGPT (GPT-4o)', sov: 42, citations: 12 },
+      { engine: 'Gemini (1.5 Pro)', sov: 55, citations: 18 },
+      { engine: 'Claude (3.5 Sonnet)', sov: 38, citations: 8 },
+      { engine: 'Perplexity AI', sov: 65, citations: 22 },
+      { engine: 'Microsoft Copilot', sov: 20, citations: 4 }
+    ].filter(e => {
+        const engineKey = e.engine.split(' ')[0].toLowerCase();
+        return selectedEngines.includes(engineKey) || selectedEngines.some((se: string) => e.engine.toLowerCase().includes(se));
+    });
+
+    const narratives = narrativeProfile.brandAttributes.map(attr => ({
+        concept: attr.name,
+        frequency: Math.round(50 + Math.random() * 40),
+        sentiment: attr.positive ? 'positive' : 'negative'
+    }));
+
+    const mappedRecommendations = aioRecommendations.map(rec => ({
+        action: rec.title,
+        details: rec.description
+    }));
+
     return NextResponse.json({
       brandName,
       industry,
@@ -240,11 +270,17 @@ For further information, you can browse practical setup guides directly on the o
         headings: crawledHeadings,
         detectedKeywords: cleanKeywords
       } : null,
+      shareOfVoice: overallMetrics.shareOfVoice,
+      sentimentScore: overallMetrics.sentimentPositive,
+      citationsCount: overallMetrics.citationRate,
+      sentimentStatus: overallMetrics.sentimentPositive > 70 ? 'Leading' : 'Emerging',
+      engineSoV,
+      narratives,
+      prompts: filteredPrompts,
+      recommendations: mappedRecommendations,
       overallMetrics,
       competitorMetrics: compShares,
-      narrativeProfile,
-      prompts: filteredPrompts,
-      aioRecommendations
+      narrativeProfile
     });
 
   } catch (error: any) {
