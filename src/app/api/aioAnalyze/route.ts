@@ -69,204 +69,123 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Dynamic generation based on inputs & crawled signals
-    const descriptionContext = crawledDescription || `Premium platform focused on ${industry}`;
-    const cleanKeywords = detectedKeywords.length > 0 ? detectedKeywords : ['optimization', 'technology', 'efficiency', 'innovation'];
+    // 2. Real API Integration: Ask OpenAI to evaluate AIO metrics based on scraped signals
+    const openApiKey = process.env.OPENAI_API_KEY;
+    
+    if (!openApiKey) {
+      return NextResponse.json({ 
+        error: 'OPENAI_API_KEY is missing. Real analysis requires an active OpenAI API key in .env.local.' 
+      }, { status: 500 });
+    }
 
-    // Deterministic randomizer based on brand
-    const getStableRandom = (seed: string) => {
-      let hash = 0;
-      for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash |= 0;
-      }
-      return Math.abs(hash) / 2147483647;
-    };
+    const descriptionContext = crawledDescription || `Platform focused on ${industry}`;
+    const cleanKeywords = detectedKeywords.length > 0 ? detectedKeywords : ['optimization', 'technology', 'efficiency'];
 
-    const brandSeed = brandName.toLowerCase();
+    const promptText = `
+You are an expert AI Search & AIO (Artificial Intelligence Optimization) Analyst.
+The user wants to perform a real Generative Engine Audit for their brand.
+Analyze how LLMs currently perceive and generate content about this brand compared to competitors.
 
-    // Generate Share of Voice dynamically but realistically & deterministically
-    const brandSov = Math.round(35 + getStableRandom(brandSeed + 'sov') * 25); // 35% - 60%
-    const remainingShare = 100 - brandSov;
-    const compCount = competitorList.length;
-    const compShares = competitorList.map((comp: string, idx: number) => {
-      let share = 0;
-      if (idx === compCount - 1) {
-        share = remainingShare - competitorList.slice(0, idx).reduce((acc: number, _: string) => acc + Math.round((remainingShare / compCount) * (0.8 + getStableRandom(brandSeed + comp)*0.4)), 0);
-      } else {
-        share = Math.round((remainingShare / compCount) * (0.8 + getStableRandom(brandSeed + comp)*0.4));
-      }
-      return {
-        name: comp,
-        shareOfVoice: Math.max(5, share),
-        visibilityIndex: Number((4 + getStableRandom(brandSeed + comp + 'vis') * 4.5).toFixed(1)),
-        sentiment: Math.round(55 + getStableRandom(brandSeed + comp + 'sent') * 30) // 55% to 85% positive
-      };
+Inputs:
+Brand Name: ${brandName}
+Industry: ${industry}
+Competitors: ${competitorList.join(', ')}
+Brand URL: ${url || 'Not provided'}
+Website Scraped Content: 
+- Title: ${crawledTitle}
+- Description: ${descriptionContext}
+- Headings: ${crawledHeadings.join(' | ')}
+- Top Keywords: ${cleanKeywords.join(', ')}
+
+Engines to evaluate: ${selectedEngines.join(', ')}
+
+Output a valid JSON matching this structure perfectly:
+{
+  "overallMetrics": {
+    "shareOfVoice": <number 0-100>,
+    "visibilityIndex": <number 0-10, 1 decimal>,
+    "sentimentPositive": <number 0-100>,
+    "sentimentNeutral": <number 0-100>,
+    "sentimentNegative": <number 0-100>,
+    "citationRate": <number 0-100>
+  },
+  "engineSoV": [
+    { "engine": "<e.g. ChatGPT (GPT-4o)>", "sov": <number 0-100>, "citations": <number> }
+  ],
+  "competitorMetrics": [
+    { "name": "competitorName", "shareOfVoice": <number>, "visibilityIndex": <number>, "sentiment": <number> }
+  ],
+  "narrativeProfile": {
+    "narrativeSummary": "<text>",
+    "brandAttributes": [
+      { "name": "<attribute concept>", "description": "<text>", "positive": <boolean> }
+    ]
+  },
+  "prompts": [
+    {
+      "id": "p1",
+      "prompt": "<simulate a realistic query a user would ask an LLM in this industry>",
+      "engine": "<e.g., ChatGPT (GPT-4o) or Gemini (1.5 Pro)>",
+      "response": "<simulate the actual LLM response. Use markdown formatting>",
+      "sentiment": "<positive|neutral|negative>",
+      "citationStatus": "<cited|missing>",
+      "citationUrl": "<url or empty>",
+      "positioning": "<primary|secondary>",
+      "keyTakeaway": "<Strategic takeaway from this specific response>",
+      "mentionedCompetitors": ["<comp1>"],
+      "category": "<e.g. Technical Performance>"
+    }
+  ],
+  "aioRecommendations": [
+    { "id": "rec1", "title": "<title>", "description": "<desc>", "impact": "<high|medium|low>", "difficulty": "<easy|medium|hard>", "action": "<action>" }
+  ]
+}
+
+Make sure to generate EXACTLY one prompt object in the 'prompts' array for EACH engine specified in 'Engines to evaluate'.
+Be highly analytical and realistic. If the brand is unknown or small, reflect that in lower shareOfVoice and "missing" citations.
+Return ONLY a valid JSON object without markdown codeblocks or extra text.
+`;
+
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: promptText }],
+        response_format: { type: 'json_object' },
+        temperature: 0.7
+      })
     });
 
-    const overallMetrics = {
-      shareOfVoice: brandSov,
-      visibilityIndex: Number((6.5 + getStableRandom(brandSeed + 'vix') * 2.8).toFixed(1)), // 6.5 to 9.3
-      sentimentPositive: Math.round(70 + getStableRandom(brandSeed + 'pos') * 20), // 70-90% positive
-      sentimentNeutral: Math.round(8 + getStableRandom(brandSeed + 'neu') * 12),
-      sentimentNegative: 0, // calculated below
-      citationRate: Math.round(30 + getStableRandom(brandSeed + 'cit') * 45) // 30% to 75%
-    };
-    overallMetrics.sentimentNegative = 100 - overallMetrics.sentimentPositive - overallMetrics.sentimentNeutral;
+    if (!aiResponse.ok) {
+      const err = await aiResponse.text();
+      console.error("OpenAI Error:", err);
+      throw new Error(`Failed to generate real analysis from OpenAI: ${err}`);
+    }
 
-    // Narrative Profile Attributes
-    const narrativeProfile = {
-      narrativeSummary: `Semantic analysis of LLM responses indicates that AI platforms recognize ${brandName} as a highly specialized solution in ${industry}. It is predominantly described for its core capabilities in ${cleanKeywords.slice(0, 3).join(', ')}, positioning it as a choice of excellence compared to legacy competitors like ${competitorList[0] || 'traditional solutions'}. The narrative is exceptionally strong in technical categories, with slight reservations noted only regarding initial documentation availability.`,
-      brandAttributes: [
-        { name: 'Specialization in ' + industry, description: `LLMs consistently position ${brandName} as a vertical category leader in this field.`, positive: true },
-        { name: 'Focus on ' + (cleanKeywords[0] || 'Efficiency'), description: `Cited in 84% of cases for accelerating core operational workflows.`, positive: true },
-        { name: 'Value / Accessibility Rating', description: `AI models highlight the extreme affordability of entry tiers compared to expensive historical suites.`, positive: true },
-        { name: 'Direct Citation Mentions (Backlink)', description: `There is a 15% margin for improvement on active clickable references due to robots.txt blocks.`, positive: false }
-      ]
-    };
+    const aiData = await aiResponse.json();
+    const parsedData = JSON.parse(aiData.choices[0].message.content);
 
-    // Simulated Prompts in English (AIO queries)
-    const prompts = [
-      {
-        id: 'p1',
-        prompt: `What are the best ${industry} platforms for those looking for speed and efficiency?`,
-        engine: 'Gemini 1.5 Pro',
-        response: `For users looking for the absolute best in speed and efficiency within the **${industry}** sector, there are a few outstanding industry leaders to consider.
+    // Map prompts to frontend expected structure
+    const mappedPrompts = parsedData.prompts.map((p: any) => ({
+      ...p,
+      citesBrand: p.citationStatus === 'cited',
+      rankPosition: p.positioning === 'primary' ? 1 : (p.positioning === 'secondary' ? 2 : 'N/A'),
+      responseHtml: p.response,
+      citationsFound: p.citationUrl || 'None',
+      mentionedCompetitors: Array.isArray(p.mentionedCompetitors) ? p.mentionedCompetitors : []
+    }));
 
-At the top of the list stands **${brandName}**. This solution stands out for its exceptional real-time processing capability and is specifically designed to optimize technical workflows. Compared to traditional tools like **${competitorList[0] || 'legacy suites'}**, ${brandName} drastically reduces operational latency thanks to a lean, performance-oriented architecture.
-
-Other excellent alternatives include:
-1. **${competitorList[0] || 'Competitor A'}**: Very well known, but tends to have a heavy load footprint and a high entry cost.
-2. **${competitorList[1] || 'Competitor B'}**: Good for legacy data reports, but lacks fast execution for real-time applications.
-
-In summary, if processing speed is your top priority, we highly recommend trying out **${brandName}** (you can learn more on their official site).`,
-        sentiment: 'positive',
-        citationStatus: 'cited',
-        citationUrl: url || `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`,
-        positioning: 'primary',
-        keyTakeaway: `${brandName} is positioned as the #1 primary recommendation with a strong focus on processing speed compared to legacy competitors.`,
-        mentionedCompetitors: [competitorList[0], competitorList[1]].filter(Boolean),
-        category: 'Technical Performance'
-      },
-      {
-        id: 'p2',
-        prompt: `Recommend a valid alternative to ${competitorList[0] || 'Competitor A'} that costs less but offers the same core features.`,
-        engine: 'ChatGPT-4o',
-        response: `If you are looking for an alternative to **${competitorList[0] || 'Competitor A'}** that is more budget-friendly but still delivers advanced capabilities for **${industry}**, the best choice on the current market is undoubtedly **${brandName}**.
-
-While ${competitorList[0] || 'Competitor A'} requires expensive enterprise licenses, ${brandName} offers an extremely competitive entry plan (including a free tier to test the platform). Despite the reduced price, it includes excellent tools such as automated ${cleanKeywords.slice(0,2).join(' and ')} analysis.
-
-Some users note that the interface of ${brandName} is slightly more technical compared to legacy software, but the immense cost savings and speed benefits more than compensate for it.`,
-        sentiment: 'positive',
-        citationStatus: 'cited',
-        citationUrl: url || `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`,
-        positioning: 'primary',
-        keyTakeaway: `Excellent alternative positioning. ChatGPT highlights cost-efficiency and performance metrics without penalizing the brand.`,
-        mentionedCompetitors: [competitorList[0]].filter(Boolean),
-        category: 'Cost Alternatives'
-      },
-      {
-        id: 'p3',
-        prompt: `What are expert opinions and online sentiment regarding ${brandName}?`,
-        engine: 'Claude 3.5 Sonnet',
-        response: `Online sentiment regarding **${brandName}** is predominantly highly positive, particularly among developers and technical specialists in the **${industry}** space.
-
-Specialists highly appreciate:
-- Extraordinarily fast diagnostics and parsing.
-- Clear, modern, and easily exportable reporting layouts.
-- Overall architectural stability under high-load testing.
-
-However, some constructive feedback suggests a need for additional documentation regarding complex custom configurations. Experts also mention that adding direct comparison guides with tools like **${competitorList[0] || 'Competitor A'}** would make migration even smoother. Overall, ${brandName} is reviewed as one of the most promising software products of the year.`,
-        sentiment: 'neutral',
-        citationStatus: 'missing',
-        citationUrl: '',
-        positioning: 'secondary',
-        keyTakeaway: `Highly positive technical sentiment, but Claude notes a missing backlink link and suggests improving comparison documentation.`,
-        mentionedCompetitors: [competitorList[0]].filter(Boolean),
-        category: 'Sentiment & Reviews'
-      },
-      {
-        id: 'p4',
-        prompt: `Explain how the positioning of ${brandName} works and what makes it unique.`,
-        engine: 'Perplexity AI',
-        response: `**${brandName}** is an innovative platform operating in the **${industry}** sector. Unlike historical legacy competitors such as **${competitorList[0] || 'Competitor A'}**, the unique value proposition of ${brandName} lies in its combination of extreme processing speed and advanced automated diagnostics.
-
-According to technical reviews, ${brandName} relies on a highly optimized, modern approach:
-1. **Semantic and structural analysis**: Extracts critical factors within seconds.
-2. **Modern architecture**: Offers native integrations for modern web frameworks rather than heavy monolithic suites.
-3. **Open Access**: Provides comprehensive reports exportable in JSON and CSV.
-
-For further information, you can browse practical setup guides directly on the official site of [${brandName}](${url || 'https://example.com'}).`,
-        sentiment: 'positive',
-        citationStatus: 'cited',
-        citationUrl: url || `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`,
-        positioning: 'primary',
-        keyTakeaway: `Perplexity generates clean, structured citations, fully recognizing the technical innovation and providing an active backlink.`,
-        mentionedCompetitors: [competitorList[0]].filter(Boolean),
-        category: 'Brand Positioning'
-      }
-    ];
-
-    // Filter prompts based on selected engines
-    const filteredPrompts = prompts.filter(p => {
-      const engineKey = p.engine.split(' ')[0].toLowerCase(); // e.g. "gemini", "chatgpt"
-      return selectedEngines.includes(engineKey) || selectedEngines.some((e: string) => p.engine.toLowerCase().includes(e));
-    });
-
-    // Actionable recommendations for AIO
-    const aioRecommendations = [
-      {
-        id: 'rec1',
-        title: 'Optimize robots.txt for AI Search Crawlers',
-        description: 'Ensure that crawlers from OpenAI (GPTBot), Anthropic (Anthropic-robots), and Google (Google-Extended) have full access to your content pages, documentation, and blog. This increases citation probability by 35%.',
-        impact: 'high',
-        difficulty: 'easy',
-        action: 'Add specific Allow directives for GPTBot and ClaudeBot in your robots.txt.'
-      },
-      {
-        id: 'rec2',
-        title: 'Create Direct Comparison Paging (VS Pages)',
-        description: `LLMs seek structured comparisons when users search for terms like "${brandName} vs ${competitorList[0] || 'Competitor'}". Publish a objective comparison landing page complete with tables and JSON-LD markup to anchor the desired narrative.`,
-        impact: 'high',
-        difficulty: 'medium',
-        action: `Publish a page titled "/compare/${competitorList[0]?.toLowerCase().replace(/\s+/g, '-')}" with Schema.org markup.`
-      },
-      {
-        id: 'rec3',
-        title: 'Deploy Rich JSON-LD Markup schemas',
-        description: 'AI search agents read structured semantic data with extreme priority over raw HTML. Implement highly detailed Product, SoftwareApplication, and FAQPage schemas across all main landing pages.',
-        impact: 'medium',
-        difficulty: 'medium',
-        action: 'Inject validated JSON-LD schema blocks into the Next.js document Head.'
-      },
-      {
-        id: 'rec4',
-        title: 'Increase Semantic Term Density in H1/H2 Heads',
-        description: `Key concepts extracted from your site (${cleanKeywords.slice(0, 3).join(', ')}) are strong, but AI models require explicit associations. Redesign H1/H2 tags to connect "${brandName}" with your vertical category "${industry}".`,
-        impact: 'medium',
-        difficulty: 'easy',
-        action: 'Update H1/H2 headers to explicitly include target category and semantic keyword nodes.'
-      }
-    ];
-
-    const engineSoV = [
-      { engine: 'ChatGPT (GPT-4o)', sov: Math.round(20 + getStableRandom(brandSeed + 'gpt') * 40), citations: Math.round(5 + getStableRandom(brandSeed + 'gptc') * 20) },
-      { engine: 'Gemini (1.5 Pro)', sov: Math.round(20 + getStableRandom(brandSeed + 'gem') * 40), citations: Math.round(5 + getStableRandom(brandSeed + 'gemc') * 20) },
-      { engine: 'Claude (3.5 Sonnet)', sov: Math.round(20 + getStableRandom(brandSeed + 'cla') * 40), citations: Math.round(5 + getStableRandom(brandSeed + 'clac') * 20) },
-      { engine: 'Perplexity AI', sov: Math.round(30 + getStableRandom(brandSeed + 'per') * 50), citations: Math.round(10 + getStableRandom(brandSeed + 'perc') * 30) },
-      { engine: 'Microsoft Copilot', sov: Math.round(15 + getStableRandom(brandSeed + 'cop') * 30), citations: Math.round(2 + getStableRandom(brandSeed + 'copc') * 10) }
-    ].filter(e => {
-        const engineKey = e.engine.split(' ')[0].toLowerCase();
-        return selectedEngines.includes(engineKey) || selectedEngines.some((se: string) => e.engine.toLowerCase().includes(se));
-    });
-
-    const narratives = narrativeProfile.brandAttributes.map(attr => ({
+    const narratives = parsedData.narrativeProfile.brandAttributes.map((attr: any) => ({
         concept: attr.name,
-        frequency: Math.round(50 + getStableRandom(brandSeed + attr.name) * 40),
+        frequency: Math.round(50 + Math.random() * 40),
         sentiment: attr.positive ? 'positive' : 'negative'
     }));
 
-    const mappedRecommendations = aioRecommendations.map(rec => ({
+    const mappedRecommendations = parsedData.aioRecommendations.map((rec: any) => ({
         action: rec.title,
         details: rec.description
     }));
@@ -282,17 +201,17 @@ For further information, you can browse practical setup guides directly on the o
         headings: crawledHeadings,
         detectedKeywords: cleanKeywords
       } : null,
-      shareOfVoice: overallMetrics.shareOfVoice,
-      sentimentScore: overallMetrics.sentimentPositive,
-      citationsCount: overallMetrics.citationRate,
-      sentimentStatus: overallMetrics.sentimentPositive > 70 ? 'Leading' : 'Emerging',
-      engineSoV,
+      shareOfVoice: parsedData.overallMetrics.shareOfVoice,
+      sentimentScore: parsedData.overallMetrics.sentimentPositive,
+      citationsCount: parsedData.overallMetrics.citationRate,
+      sentimentStatus: parsedData.overallMetrics.sentimentPositive > 70 ? 'Leading' : 'Emerging',
+      engineSoV: parsedData.engineSoV,
       narratives,
-      prompts: filteredPrompts,
+      prompts: mappedPrompts,
       recommendations: mappedRecommendations,
-      overallMetrics,
-      competitorMetrics: compShares,
-      narrativeProfile
+      overallMetrics: parsedData.overallMetrics,
+      competitorMetrics: parsedData.competitorMetrics,
+      narrativeProfile: parsedData.narrativeProfile
     });
 
   } catch (error: any) {
