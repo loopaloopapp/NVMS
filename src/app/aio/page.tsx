@@ -612,7 +612,16 @@ export default function AioPage() {
                         </span>
                       </td>
                       <td style={{ padding: '1rem 1.5rem' }}>
-                        <button className="btn btn-secondary" onClick={() => setSelectedAioPromptId(p.id)} style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '4px' }}>
+                        <button 
+                          className="btn btn-secondary" 
+                          onClick={() => {
+                            setSelectedAioPromptId(p.id);
+                            setTimeout(() => {
+                              document.getElementById('prompt-details')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 50);
+                          }} 
+                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '4px' }}
+                        >
                           View Details
                         </button>
                       </td>
@@ -628,7 +637,7 @@ export default function AioPage() {
             const promptDetails = aioResults.prompts.find((p: any) => p.id === selectedAioPromptId);
             if (!promptDetails) return null;
             return (
-              <div className="card" style={{ marginTop: '1.5rem', borderLeft: '4px solid var(--accent)' }}>
+              <div id="prompt-details" className="card" style={{ marginTop: '1.5rem', borderLeft: '4px solid var(--accent)', scrollMarginTop: '80px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
                   Detailed Response analysis for "{promptDetails.prompt}"
                 </h3>
@@ -658,10 +667,20 @@ export default function AioPage() {
                   </div>
                 </div>
 
-                <div>
+                <div style={{ marginBottom: '1.25rem' }}>
                   <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>Extracted Citation / Semantic Anchor:</span>
                   <div style={{ padding: '0.75rem 1rem', backgroundColor: 'rgba(31, 164, 232, 0.05)', border: '1px solid rgba(31, 164, 232, 0.15)', borderRadius: '12px', fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--accent)' }}>
                     {promptDetails.citationsFound || "None"}
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.4rem' }}>
+                    <Sparkles size={14} style={{ color: 'var(--warning)' }} />
+                    Strategic Advice & Key Takeaway
+                  </span>
+                  <div style={{ padding: '1rem', backgroundColor: 'rgba(234, 179, 8, 0.05)', border: '1px dashed var(--warning)', borderRadius: '12px', fontSize: '0.85rem', lineHeight: '1.5', color: 'var(--text-primary)' }}>
+                    {promptDetails.keyTakeaway || "Maintain consistent brand messaging across technical documentation to improve visibility."}
                   </div>
                 </div>
               </div>
