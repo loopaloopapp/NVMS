@@ -6,17 +6,40 @@ export async function POST(req: NextRequest) {
   try {
     const { queries, gscData, brandName = 'HydraSEO', competitor = 'Semrush' } = await req.json();
 
-    let queryList: string[] = [];
+    const parseNumber = (value: unknown) => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+      if (typeof value === 'string') {
+        const cleaned = value.replace(/[^\d\.\-]/g, '').trim();
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }
+      return undefined;
+    };
 
-    // Parse input queries
-    if (queries && typeof queries === 'string') {
+    const gscRows = Array.isArray(gscData)
+      ? gscData
+          .map((row: any) => ({
+            query: typeof row?.query === 'string' ? row.query.trim() : '',
+            clicks: parseNumber(row?.clicks),
+            impressions: parseNumber(row?.impressions),
+            position: parseNumber(row?.position),
+            ctr: parseNumber(row?.ctr)
+          }))
+          .filter(row => row.query.length > 0)
+      : [];
+
+    let queryList: string[] = [];
+    if (typeof queries === 'string') {
       queryList = queries
         .split('\n')
         .map((q: string) => q.trim())
         .filter((q: string) => q.length > 0);
     }
 
-    // Default English queries if none are provided
+    if (queryList.length === 0 && gscRows.length > 0) {
+      queryList = gscRows.map(row => row.query);
+    }
+
     if (queryList.length === 0) {
       queryList = [
         `best accounting software for smb`,
@@ -28,105 +51,119 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    // Dynamic generation of query metrics
+    const normalizedBrand = brandName.trim().toLowerCase();
+    const normalizedCompetitor = competitor.trim().toLowerCase();
+    const baseDomain = `https://${brandName.toLowerCase().replace(/\s+/g, '')}.com`;
+
+    const derivePosition = (query: string) => {
+      if (query.includes('vs') || query.includes('alternative') || query.includes('compare')) return 4.5;
+      if (query.includes('pricing') || query.includes('price') || query.includes('cost') || query.includes('plans')) return 2.8;
+      if (query.includes('review') || query.includes('opinion') || query.includes('rating')) return 5.6;
+      if (query.includes('how') || query.includes('guide') || query.includes('tutorial') || query.includes('what')) return 5.2;
+      if (query.includes(normalizedBrand)) return 3.0;
+      return 6.3;
+    };
+
+    const calculateImpressions = (position: number) => Math.max(35, Math.round(450 / Math.max(1, position)));
+    const calculateCtr = (position: number) => Number(Math.max(2, Math.min(28, 24 - position * 2)).toFixed(1));
+
+    const getQueryClassification = (query: string) => {
+      const lower = query.toLowerCase();
+      return {
+        isBrandQuery: normalizedBrand.length > 0 && lower.includes(normalizedBrand),
+        isCompetitorQuery: normalizedCompetitor.length > 0 && lower.includes(normalizedCompetitor),
+        isComparison: /\b(vs|versus|compare|alternative|best alternative)\b/.test(lower),
+        isPricing: /\b(price|pricing|cost|plans|subscription|quote)\b/.test(lower),
+        isReview: /\b(review|opinion|rating|score|testimonial|feedback)\b/.test(lower),
+        isInformational: /\b(how|what|why|guide|tutorial|learn|tips|best)\b/.test(lower)
+      };
+    };
+
     const results = queryList.map((q: string, idx: number) => {
-      const lowerQ = q.toLowerCase();
-      
-      let googlePosition = Number((2.0 + Math.random() * 8.0).toFixed(1));
-      let clicks = Math.round(50 + Math.random() * 450);
-      let impressions = Math.round(clicks * (8 + Math.random() * 12));
-      let ctr = Number(((clicks / impressions) * 100).toFixed(1));
+      const normalized = q.trim();
+      const row = gscRows.find(r => r.query.toLowerCase() === normalized.toLowerCase());
+      const classification = getQueryClassification(normalized);
 
-      let citedEngines: string[] = [];
-      let citedUrl = '';
-      let entityType = '—';
-      let entityName = '—';
-      let citationMode = '—';
+      const derivedPosition = row?.position ?? derivePosition(normalized.toLowerCase());
+      const googlePosition = Number(derivedPosition.toFixed(1));
+      const impressions = row?.impressions ?? calculateImpressions(googlePosition);
+      const ctr = row?.ctr ?? calculateCtr(googlePosition);
+      const clicks = row?.clicks ?? Math.max(1, Math.round(impressions * (ctr / 100)));
 
-      // Seed deterministic-looking simulated metrics based on query type
-      if (lowerQ.includes('alternative') || lowerQ.includes('vs') || lowerQ.includes('compare')) {
-        googlePosition = Number((4.0 + Math.random() * 2.0).toFixed(1));
-        entityType = 'competitor comparison';
-        entityName = 'comparative grid';
-        if (Math.random() > 0.7) {
-          citedEngines = ['Perplexity'];
-          citedUrl = `https://${brandName.toLowerCase()}.com/compare`;
-          citationMode = 'comparison table';
-        } else {
-          citedEngines = [];
-          citationMode = 'None';
-        }
-      } else if (lowerQ.includes('pricing') || lowerQ.includes('cost') || lowerQ.includes('price')) {
-        googlePosition = Number((1.5 + Math.random() * 1.5).toFixed(1));
-        entityType = 'pricing';
-        entityName = `${brandName} pricing plans`;
-        citationMode = 'direct source';
-        citedEngines = Math.random() > 0.4 ? ['ChatGPT', 'Gemini'] : ['ChatGPT'];
-        citedUrl = `https://${brandName.toLowerCase()}.com/pricing`;
-      } else if (lowerQ.includes('how') || lowerQ.includes('work') || lowerQ.includes('guide') || lowerQ.includes('tutorial')) {
-        googlePosition = Number((5.0 + Math.random() * 4.0).toFixed(1));
-        entityType = 'feature';
-        entityName = `${brandName} workflow automation`;
-        citationMode = 'faq answer';
-        citedEngines = ['Perplexity', 'ChatGPT', 'Gemini'];
-        citedUrl = `https://${brandName.toLowerCase()}.com/features`;
-      } else if (lowerQ.includes('review') || lowerQ.includes('opinion') || lowerQ.includes('expert')) {
-        googlePosition = Number((6.0 + Math.random() * 3.5).toFixed(1));
-        entityType = 'reputation';
-        entityName = 'external reviews';
-        citationMode = 'brand mention';
-        citedEngines = ['Perplexity'];
-        citedUrl = `https://www.trustpilot.com/review/${brandName.toLowerCase()}`;
-      } else if (lowerQ.includes('integration') || lowerQ.includes('api') || lowerQ.includes('connect')) {
-        googlePosition = Number((3.0 + Math.random() * 4.0).toFixed(1));
-        entityType = 'feature';
-        entityName = 'integration hub';
-        citationMode = 'None';
-        citedEngines = [];
-      } else {
-        // Generic / Brand query
-        googlePosition = Number((1.0 + Math.random() * 1.5).toFixed(1));
-        entityType = 'brand';
-        entityName = brandName;
-        citationMode = 'direct source';
-        citedEngines = ['Perplexity', 'ChatGPT', 'Gemini', 'Claude', 'Copilot'];
-        citedUrl = `https://${brandName.toLowerCase()}.com`;
-      }
+      const engines = new Set<string>();
+      if (classification.isBrandQuery || classification.isPricing || classification.isInformational) engines.add('ChatGPT');
+      if (classification.isComparison || classification.isPricing || classification.isBrandQuery) engines.add('Gemini');
+      if (classification.isBrandQuery || classification.isInformational || classification.isCompetitorQuery) engines.add('Claude');
+      if (classification.isComparison || classification.isReview || classification.isCompetitorQuery) engines.add('Perplexity');
+      if (classification.isBrandQuery && googlePosition <= 5) engines.add('Copilot');
+      if (engines.size === 0) engines.add('Perplexity');
 
-      // Calculate GEO Gap Index: ((SEO Opportunity * Organic Demand) - AI Citation Score)
-      // SEO Opportunity Score = 11 - googlePosition (higher value = page 1 opportunity)
+      const citedEngines = Array.from(engines);
+      const entityType = classification.isComparison
+        ? 'competitor comparison'
+        : classification.isPricing
+          ? 'pricing'
+          : classification.isReview
+            ? 'reputation'
+            : classification.isInformational
+              ? 'feature'
+              : normalized.includes(normalizedBrand)
+                ? 'brand'
+                : 'informational';
+      const entityName = classification.isComparison
+        ? `${brandName} vs ${competitor}`
+        : classification.isPricing
+          ? `${brandName} pricing plans`
+          : classification.isReview
+            ? 'external reviews'
+            : classification.isInformational
+              ? `${brandName} feature documentation`
+              : `${brandName} brand page`;
+      const citationMode = classification.isComparison
+        ? 'comparison table'
+        : classification.isPricing
+          ? 'direct source'
+          : classification.isReview
+            ? 'brand mention'
+            : classification.isInformational
+              ? 'faq answer'
+              : 'direct source';
+      const citedUrl = classification.isComparison
+        ? `${baseDomain}/compare-${competitor.toLowerCase().replace(/\s+/g, '-')}`
+        : classification.isPricing
+          ? `${baseDomain}/pricing`
+          : classification.isReview
+            ? `https://www.trustpilot.com/review/${brandName.toLowerCase().replace(/\s+/g, '')}`
+            : classification.isInformational
+              ? `${baseDomain}/features`
+              : `${baseDomain}`;
+
       const seoOpportunity = Math.max(1, 11 - googlePosition);
-      // Organic demand index = log10 of impressions
-      const organicDemand = Math.log10(impressions || 100);
-      // AI Citation score = cited engines out of 5 * 100
+      const organicDemand = Math.log10(Math.max(1, impressions));
       const aiCitationScore = (citedEngines.length / 5) * 100;
-      
-      // Calculate gap index (0 - 100)
-      const rawGap = ((seoOpportunity * organicDemand * 25) - aiCitationScore);
+      const rawGap = (seoOpportunity * organicDemand * 25) - aiCitationScore;
       const geoGapScore = Math.min(100, Math.max(0, Math.round(rawGap)));
-      
+
       let gapLevel = 'Low';
       if (geoGapScore > 70) gapLevel = 'High';
       else if (geoGapScore > 40) gapLevel = 'Medium';
 
-      let recommendedAction = 'optimize schema tags';
+      let recommendedAction = 'Monitor visibility and keep structured H1/H2 attributes updated.';
       if (gapLevel === 'High') {
         if (entityType === 'competitor comparison') {
-          recommendedAction = `create native comparison page "/compare/${competitor.toLowerCase()}" + FAQ schema`;
+          recommendedAction = `Create a dedicated comparison page for ${brandName} and ${competitor} with FAQ schema and clear CTA.`;
         } else if (entityType === 'reputation') {
-          recommendedAction = 'encourage customers to leave review citations on external authoritative sites';
+          recommendedAction = 'Build more review-rich content and citation signals on authoritative review sites.';
         } else {
-          recommendedAction = `publish high-authority informational page focused on "${q}" keywords`;
+          recommendedAction = `Publish high-value content around "${normalized}" and add schema-rich answer blocks.`;
         }
       } else if (gapLevel === 'Medium') {
-        recommendedAction = 'implement Product JSON-LD markup and refine canonical URL redirects';
-      } else {
-        recommendedAction = 'monitor visibility and keep structured H1/H2 attributes updated';
+        recommendedAction = 'Improve page metadata and internal links to strengthen relevance for the query.';
       }
 
       return {
         id: `geo-${idx}`,
-        query: q,
+        query: normalized,
         googlePosition,
         clicks,
         impressions,
@@ -142,85 +179,76 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // Overview numbers
     const totalQueries = results.length;
     const queriesWithAiCitation = results.filter(r => r.engines.length > 0).length;
     const aiCoverageRate = Math.round((queriesWithAiCitation / totalQueries) * 100);
     const highGapQueries = results.filter(r => r.gapLevel === 'High').length;
     const highGapRate = Math.round((highGapQueries / totalQueries) * 100);
-    
-    // Count distinct entities cited
     const citedEntities = new Set(results.filter(r => r.engines.length > 0).map(r => r.entityType));
-    const entitiesCitedCount = Math.max(4, citedEntities.size + 2); // simulated variety count
+    const entitiesCitedCount = citedEntities.size;
 
-    // Coverage per engine counts
     const engineCitationCounts: Record<string, number> = {
-      perplexity: 0,
-      chatgpt: 0,
-      gemini: 0,
-      claude: 0,
-      copilot: 0
+      Perplexity: 0,
+      ChatGPT: 0,
+      Gemini: 0,
+      Claude: 0,
+      Copilot: 0
     };
     results.forEach(r => {
       r.engines.forEach((eng: string) => {
-        const key = eng.toLowerCase();
-        if (key.includes('perplexity')) engineCitationCounts.perplexity++;
-        else if (key.includes('chatgpt')) engineCitationCounts.chatgpt++;
-        else if (key.includes('gemini')) engineCitationCounts.gemini++;
-        else if (key.includes('claude')) engineCitationCounts.claude++;
-        else if (key.includes('copilot') || key.includes('microsoft')) engineCitationCounts.copilot++;
+        const normalized = eng.toLowerCase();
+        if (normalized.includes('perplexity')) engineCitationCounts.Perplexity++;
+        else if (normalized.includes('chatgpt')) engineCitationCounts.ChatGPT++;
+        else if (normalized.includes('gemini')) engineCitationCounts.Gemini++;
+        else if (normalized.includes('claude')) engineCitationCounts.Claude++;
+        else if (normalized.includes('copilot')) engineCitationCounts.Copilot++;
       });
     });
 
-    const engineCoverage = Object.entries(engineCitationCounts).map(([engine, count]) => {
-      const rate = Math.round((count / totalQueries) * 100);
-      return {
-        engine: engine.charAt(0).toUpperCase() + engine.slice(1),
-        rate,
-        count
-      };
-    });
+    const engineCoverage = Object.entries(engineCitationCounts).map(([engine, count]) => ({
+      engine,
+      coverage: Math.round((count / totalQueries) * 100),
+      citationsCount: count
+    }));
 
-    // Dynamic query clustering based on analyzed query types
-    const brandQueries = results.filter(r => r.query.toLowerCase().includes(brandName.toLowerCase()));
-    const vsQueries = results.filter(r => r.query.toLowerCase().includes('vs') || r.query.toLowerCase().includes('alternative') || r.query.toLowerCase().includes('compare'));
-    const priceQueries = results.filter(r => r.query.toLowerCase().includes('pricing') || r.query.toLowerCase().includes('price') || r.query.toLowerCase().includes('cost'));
-    const infoQueries = results.filter(r => r.query.toLowerCase().includes('how') || r.query.toLowerCase().includes('what') || r.query.toLowerCase().includes('guide') || r.query.toLowerCase().includes('tutorial'));
+    const brandQueries = results.filter(r => r.query.toLowerCase().includes(normalizedBrand));
+    const vsQueries = results.filter(r => /\b(vs|versus|compare|alternative)\b/.test(r.query.toLowerCase()));
+    const priceQueries = results.filter(r => /\b(price|pricing|cost|plans|subscription)\b/.test(r.query.toLowerCase()));
+    const infoQueries = results.filter(r => /\b(how|what|why|guide|tutorial|learn|tips)\b/.test(r.query.toLowerCase()));
 
     const clusters = [
       {
         name: `Brand / Navigational (${brandName})`,
-        organicPos: brandQueries.length > 0 ? (brandQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / brandQueries.length).toFixed(1) : '1.2',
-        aiCitation: brandQueries.length > 0 ? `${Math.round((brandQueries.filter(r => r.engines.length > 0).length / brandQueries.length) * 100)}%` : '85%',
-        gap: brandQueries.length > 0 ? (brandQueries.reduce((acc, curr) => acc + curr.geoGapScore, 0) / brandQueries.length > 50 ? 'High' : 'Low') : 'Low'
+        avgPosition: brandQueries.length > 0 ? (brandQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / brandQueries.length).toFixed(1) : '1.2',
+        aiCitationRate: brandQueries.length > 0 ? Math.round((brandQueries.filter(r => r.engines.length > 0).length / brandQueries.length) * 100) : 85,
+        gapLevel: brandQueries.length > 0 ? (brandQueries.reduce((acc,curr)=>acc+curr.geoGapScore,0)/brandQueries.length > 50 ? 'HIGH' : 'LOW') : 'LOW'
       },
       {
         name: `Comparison (vs ${competitor})`,
-        organicPos: vsQueries.length > 0 ? (vsQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / vsQueries.length).toFixed(1) : '4.8',
-        aiCitation: vsQueries.length > 0 ? `${Math.round((vsQueries.filter(r => r.engines.length > 0).length / vsQueries.length) * 100)}%` : '20%',
-        gap: vsQueries.length > 0 ? (vsQueries.reduce((acc, curr) => acc + curr.geoGapScore, 0) / vsQueries.length > 50 ? 'High' : 'Low') : 'High'
+        avgPosition: vsQueries.length > 0 ? (vsQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / vsQueries.length).toFixed(1) : '4.8',
+        aiCitationRate: vsQueries.length > 0 ? Math.round((vsQueries.filter(r => r.engines.length > 0).length / vsQueries.length) * 100) : 20,
+        gapLevel: vsQueries.length > 0 ? (vsQueries.reduce((acc,curr)=>acc+curr.geoGapScore,0)/vsQueries.length > 50 ? 'HIGH' : 'LOW') : 'HIGH'
       },
       {
         name: 'Transactional & Pricing',
-        organicPos: priceQueries.length > 0 ? (priceQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / priceQueries.length).toFixed(1) : '2.3',
-        aiCitation: priceQueries.length > 0 ? `${Math.round((priceQueries.filter(r => r.engines.length > 0).length / priceQueries.length) * 100)}%` : '50%',
-        gap: priceQueries.length > 0 ? (priceQueries.reduce((acc, curr) => acc + curr.geoGapScore, 0) / priceQueries.length > 50 ? 'High' : 'Medium') : 'Medium'
+        avgPosition: priceQueries.length > 0 ? (priceQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / priceQueries.length).toFixed(1) : '2.3',
+        aiCitationRate: priceQueries.length > 0 ? Math.round((priceQueries.filter(r => r.engines.length > 0).length / priceQueries.length) * 100) : 50,
+        gapLevel: priceQueries.length > 0 ? (priceQueries.reduce((acc,curr)=>acc+curr.geoGapScore,0)/priceQueries.length > 50 ? 'HIGH' : 'MEDIUM') : 'MEDIUM'
       },
       {
         name: 'Informational & How-to',
-        organicPos: infoQueries.length > 0 ? (infoQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / infoQueries.length).toFixed(1) : '6.4',
-        aiCitation: infoQueries.length > 0 ? `${Math.round((infoQueries.filter(r => r.engines.length > 0).length / infoQueries.length) * 100)}%` : '35%',
-        gap: infoQueries.length > 0 ? (infoQueries.reduce((acc, curr) => acc + curr.geoGapScore, 0) / infoQueries.length > 50 ? 'High' : 'Medium') : 'Medium'
+        avgPosition: infoQueries.length > 0 ? (infoQueries.reduce((acc, curr) => acc + curr.googlePosition, 0) / infoQueries.length).toFixed(1) : '6.4',
+        aiCitationRate: infoQueries.length > 0 ? Math.round((infoQueries.filter(r => r.engines.length > 0).length / infoQueries.length) * 100) : 35,
+        gapLevel: infoQueries.length > 0 ? (infoQueries.reduce((acc,curr)=>acc+curr.geoGapScore,0)/infoQueries.length > 50 ? 'HIGH' : 'MEDIUM') : 'MEDIUM'
       }
     ];
 
-    // Entity mapping site citations details
     const siteEntities = [
       { name: 'Main Brand', frequency: 'High', description: 'Cited heavily on brand name queries and official domain homepage links.', status: 'stable' },
-      { name: 'Features & Use Cases', frequency: 'Medium', description: 'Excellent coverage for how-to questions but missing deep canonical deep-linking.', status: 'warning' },
-      { name: 'Pricing Page', frequency: 'Medium', description: 'Often cited, but LLMs occasionally recommend outdated price quotes from blog posts.', status: 'warning' },
-      { name: 'FAQ & Help Center', frequency: 'Low', description: 'Extremely low crawl reference. Opportunity to inject FAQPage JSON-LD schemas.', status: 'opportunity' },
-      { name: 'Competitor Comparisons', frequency: 'Critical', description: 'Almost completely absent. Priority cluster for GEO gap resolution.', status: 'critical' }
+      { name: 'Features & Use Cases', frequency: 'Medium', description: 'Good coverage for how-to content, but deeper schema is needed.', status: 'warning' },
+      { name: 'Pricing Page', frequency: 'Medium', description: 'Typically cited for pricing queries, but currency and plan details should be refreshed.', status: 'warning' },
+      { name: 'FAQ & Help Center', frequency: 'Low', description: 'Low citation density; strong opportunity to add FAQPage JSON-LD.', status: 'opportunity' },
+      { name: 'Competitor Comparisons', frequency: 'Critical', description: 'Missing direct comparison pages for top competitor queries.', status: 'critical' }
     ];
 
     return NextResponse.json({
@@ -244,7 +272,6 @@ export async function POST(req: NextRequest) {
       })),
       entitiesMapping: siteEntities
     });
-
   } catch (error: any) {
     console.error('GEO analysis error:', error);
     return NextResponse.json({ error: error.message || 'An error occurred during GEO analysis.' }, { status: 500 });

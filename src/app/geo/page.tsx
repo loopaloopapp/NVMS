@@ -25,6 +25,7 @@ export default function GeoPage() {
   const [brandCompetitors, setBrandCompetitors] = useState('Semrush');
   const [geoQueriesInput, setGeoQueriesInput] = useState('');
   const [geoGscFileName, setGeoGscFileName] = useState('');
+  const [geoGscData, setGeoGscData] = useState<Array<{ query: string; clicks?: number; impressions?: number; position?: number; ctr?: number }>>([]);
   const [isScanningGeo, setIsScanningGeo] = useState(false);
   const [geoProgress, setGeoProgress] = useState(0);
   const [geoStatusMessage, setGeoStatusMessage] = useState('');
@@ -198,6 +199,7 @@ export default function GeoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           queries: geoQueriesInput,
+          gscData: geoGscData,
           brandName: brandName || 'HydraSEO',
           competitor: brandCompetitors.split(',')[0] || 'Semrush'
         })
@@ -281,17 +283,31 @@ export default function GeoPage() {
       const text = event.target?.result as string;
       if (!text) return;
       
-      const lines = text.split(/\r?\n/);
-      let queriesList: string[] = [];
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const rows: Array<{ query: string; clicks?: number; impressions?: number; position?: number; ctr?: number }> = [];
       let queryColIdx = 0;
+      let clicksColIdx = -1;
+      let impressionsColIdx = -1;
+      let positionColIdx = -1;
+      let ctrColIdx = -1;
       
       if (lines.length > 0) {
         const firstLineCells = lines[0].split(',').map(c => c.trim().toLowerCase().replace(/"/g, ''));
-        const foundIdx = firstLineCells.findIndex(cell => cell.includes('query') || cell.includes('keyword') || cell.includes('parola'));
-        if (foundIdx !== -1) {
-          queryColIdx = foundIdx;
-        }
+        firstLineCells.forEach((cell, idx) => {
+          if (cell.includes('query') || cell.includes('keyword') || cell.includes('parola')) queryColIdx = idx;
+          if (cell.includes('click')) clicksColIdx = idx;
+          if (cell.includes('impression')) impressionsColIdx = idx;
+          if (cell.includes('position') || cell.includes('posizione')) positionColIdx = idx;
+          if (cell.includes('ctr') || cell.includes('click-through')) ctrColIdx = idx;
+        });
       }
+      
+      const parseNumber = (value: string | undefined) => {
+        if (!value) return undefined;
+        const cleaned = value.replace(/[^\d\.\-]/g, '').trim();
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -304,22 +320,23 @@ export default function GeoPage() {
           cells = line.split(',');
         }
         
-        const q = cells[queryColIdx]?.trim();
-        if (q && q !== '' && isNaN(Number(q))) {
-          queriesList.push(q);
-        }
+        const query = cells[queryColIdx]?.trim();
+        if (!query || query === '' || !isNaN(Number(query))) continue;
+        const clicks = parseNumber(cells[clicksColIdx]);
+        const impressions = parseNumber(cells[impressionsColIdx]);
+        const position = parseNumber(cells[positionColIdx]);
+        const ctr = parseNumber(cells[ctrColIdx]);
+        rows.push({ query, clicks, impressions, position, ctr });
       }
       
-      if (queriesList.length === 0) {
-        queriesList = lines.map(line => {
-          const cells = line.split(',');
-          return cells[0]?.replace(/"/g, '').trim();
-        }).filter(q => q && q.length > 0 && isNaN(Number(q)));
-      }
+      const queriesList = rows.length > 0 ? rows.map(row => row.query) : lines.slice(1).map(line => {
+        const cells = line.split(',');
+        return cells[0]?.replace(/"/g, '').trim();
+      }).filter(q => q && q.length > 0 && isNaN(Number(q)));
       
+      setGeoGscData(rows);
       setGeoQueriesInput(queriesList.join('\n'));
     };
-    reader.readAsText(file);
   };
 
   const handleCsvTrigger = () => {
@@ -329,6 +346,7 @@ export default function GeoPage() {
   const handleLoadSampleQueries = (e: React.MouseEvent) => {
     e.stopPropagation();
     setGeoGscFileName('sample_queries.csv');
+    setGeoGscData([]);
     setGeoQueriesInput(
       'best cloud platform for startup\n' +
       'best edge compute databases\n' +
