@@ -272,7 +272,7 @@ export default function Home() {
         setStatusMessage(step.msg);
       }
 
-      const response = await fetch('/api/seoAnalyze', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

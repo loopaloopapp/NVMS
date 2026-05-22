@@ -16,6 +16,17 @@ async function setup() {
     );
   `;
   
+  console.log("Creating scans table...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS scans (
+      id SERIAL PRIMARY KEY,
+      user_email VARCHAR(255) REFERENCES users(email) ON DELETE CASCADE,
+      scanned_url VARCHAR(255) NOT NULL,
+      results_payload JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
   console.log("Creating pro account for the admin...");
   await sql`
     INSERT INTO users (email, name, plan, scans_used)
