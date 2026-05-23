@@ -187,8 +187,8 @@ async function crawlSite(
           } catch {}
         }
       }
-    } catch (err) {
-      console.error(`Error crawling ${currentUrl}:`, err);
+    } catch (err: any) {
+      console.error(`Error crawling ${currentUrl}:`, err?.message || err);
     }
   }
 
@@ -198,7 +198,7 @@ async function crawlSite(
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const url = searchParams.get('url');
+    let url = searchParams.get('url');
     const limitStr = searchParams.get('limit');
     const sameHostOnlyStr = searchParams.get('sameHostOnly');
     const excludeQueryStringStr = searchParams.get('excludeQueryString');
@@ -207,6 +207,12 @@ export async function GET(req: NextRequest) {
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
+    }
+
+    console.log('Technical scan GET request', { url, limitStr, sameHostOnlyStr, excludeQueryStringStr, ignorePathsStr });
 
     const limit = limitStr ? parseInt(limitStr, 10) : 1;
     const sameHostOnly = sameHostOnlyStr !== 'false';
@@ -227,11 +233,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { url, options } = await req.json();
+    const { url: rawUrl, options } = await req.json();
+    let url = rawUrl;
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
+    }
+
+    console.log('Technical scan POST request', { url, options });
 
     const limit = options?.limit || 1;
     const sameHostOnly = options?.sameHostOnly !== false;
