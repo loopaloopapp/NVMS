@@ -65,7 +65,13 @@ async function analyzeSinglePage(
   const initialHtmlRes = await fetchInitialHtml(pageUrl);
   const initialMetadata = extractHeadMetadata(initialHtmlRes.html);
   const initialContent = extractContentSignals(initialHtmlRes.html);
-  const discoveredLinks = discoverLinks(initialHtmlRes.html, initialHtmlRes.finalUrl || pageUrl);
+
+  // Launch Playwright for full render & performance audits
+  const renderedHtmlRes = await renderWithBrowser(pageUrl, initialHtmlRes.durationMs);
+  const renderedHtml = renderedHtmlRes.html || initialHtmlRes.html;
+  const renderedMetadata = extractHeadMetadata(renderedHtml);
+  const renderedContent = extractContentSignals(renderedHtml);
+  const discoveredLinks = discoverLinks(renderedHtml, initialHtmlRes.finalUrl || pageUrl);
 
   // Apply filtering options
   let linksToReturn = discoveredLinks;
@@ -88,12 +94,6 @@ async function analyzeSinglePage(
     });
     linksToReturn = Array.from(new Set(linksToReturn));
   }
-
-  // Launch Playwright for full render & performance audits
-  const renderedHtmlRes = await renderWithBrowser(pageUrl, initialHtmlRes.durationMs);
-  const renderedHtml = renderedHtmlRes.html || initialHtmlRes.html;
-  const renderedMetadata = extractHeadMetadata(renderedHtml);
-  const renderedContent = extractContentSignals(renderedHtml);
 
   const isCSRDependent = compareContent(initialContent, renderedContent);
   const metadataDiffs = compareMetadata(initialMetadata, renderedMetadata);
