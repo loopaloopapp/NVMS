@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Play, Square, AlertCircle, AlertTriangle, CheckCircle, Info, 
@@ -40,6 +40,23 @@ export default function Home() {
   const [selectedResult, setSelectedResult] = useState<any | null>(null);
   const [referrals, setReferrals] = useState<Record<string, string>>({});
   const [drawerTab, setDrawerTab] = useState<'seo-diff' | 'lighthouse-details'>('seo-diff');
+  const [activeAuditCategory, setActiveAuditCategory] = useState<'performance' | 'seo' | 'accessibility' | 'best-practices' | null>(null);
+  const performanceSectionRef = useRef<HTMLDivElement | null>(null);
+  const seoSectionRef = useRef<HTMLDivElement | null>(null);
+  const accessibilitySectionRef = useRef<HTMLDivElement | null>(null);
+  const bestPracticesSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToLighthouseSection = (category: 'performance' | 'seo' | 'accessibility' | 'best-practices') => {
+    setActiveAuditCategory(category);
+    const refMap = {
+      performance: performanceSectionRef,
+      seo: seoSectionRef,
+      accessibility: accessibilitySectionRef,
+      'best-practices': bestPracticesSectionRef
+    } as const;
+    const targetRef = refMap[category];
+    targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Robots.txt generator states
   const [showRobotsModal, setShowRobotsModal] = useState(false);
@@ -1332,50 +1349,133 @@ Sitemap: https://${domain}/sitemap.xml`;
                 {selectedResult.lighthouse ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', textAlign: 'center' }}>
-                      <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => scrollToLighthouseSection('performance')}
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: activeAuditCategory === 'performance' ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-secondary)',
+                          border: `1px solid ${activeAuditCategory === 'performance' ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          color: 'inherit'
+                        }}
+                      >
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Performance</span>
                         <div style={{ fontSize: '1.25rem', fontWeight: 800, color: getScoreColor(selectedResult.lighthouse.scores.performance), marginTop: '0.25rem' }}>
                           {selectedResult.lighthouse.scores.performance}
                         </div>
-                      </div>
-                      <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollToLighthouseSection('seo')}
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: activeAuditCategory === 'seo' ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-secondary)',
+                          border: `1px solid ${activeAuditCategory === 'seo' ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          color: 'inherit'
+                        }}
+                      >
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>SEO</span>
                         <div style={{ fontSize: '1.25rem', fontWeight: 800, color: getScoreColor(selectedResult.lighthouse.scores.seo), marginTop: '0.25rem' }}>
                           {selectedResult.lighthouse.scores.seo}
                         </div>
-                      </div>
-                      <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollToLighthouseSection('accessibility')}
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: activeAuditCategory === 'accessibility' ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-secondary)',
+                          border: `1px solid ${activeAuditCategory === 'accessibility' ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          color: 'inherit'
+                        }}
+                      >
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Accessibility</span>
                         <div style={{ fontSize: '1.25rem', fontWeight: 800, color: getScoreColor(selectedResult.lighthouse.scores.accessibility), marginTop: '0.25rem' }}>
                           {selectedResult.lighthouse.scores.accessibility}
                         </div>
-                      </div>
-                      <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollToLighthouseSection('best-practices')}
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: activeAuditCategory === 'best-practices' ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-secondary)',
+                          border: `1px solid ${activeAuditCategory === 'best-practices' ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          color: 'inherit'
+                        }}
+                      >
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Best Prac.</span>
                         <div style={{ fontSize: '1.25rem', fontWeight: 800, color: getScoreColor(selectedResult.lighthouse.scores['best-practices']), marginTop: '0.25rem' }}>
                           {selectedResult.lighthouse.scores['best-practices']}
                         </div>
-                      </div>
+                      </button>
                     </div>
 
                     <div>
-                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>Detailed Performance Audits</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {selectedResult.lighthouse.audits.map((audit: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                            <div>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{audit.title}</span>
-                              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{audit.description}</span>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem' }}>Detailed Lighthouse Audits</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {['performance', 'seo', 'accessibility', 'best-practices'].map((category) => {
+                          const audits = selectedResult.lighthouse.audits.filter((audit: any) => audit.category === category);
+                          const titleMap: Record<string, string> = {
+                            performance: 'Performance Audits',
+                            seo: 'SEO Audits',
+                            accessibility: 'Accessibility Audits',
+                            'best-practices': 'Best Practices Audits'
+                          };
+                          const refMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
+                            performance: performanceSectionRef,
+                            seo: seoSectionRef,
+                            accessibility: accessibilitySectionRef,
+                            'best-practices': bestPracticesSectionRef
+                          };
+
+                          return (
+                            <div
+                              key={category}
+                              ref={refMap[category]}
+                              style={{
+                                padding: '1rem',
+                                backgroundColor: activeAuditCategory === category ? 'rgba(59, 130, 246, 0.04)' : 'var(--bg-secondary)',
+                                border: `1px solid ${activeAuditCategory === category ? 'var(--accent)' : 'var(--border)'}`,
+                                borderRadius: '14px'
+                              }}
+                            >
+                              <h5 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem' }}>{titleMap[category]}</h5>
+                              {audits.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                  {audits.map((audit: any, i: number) => (
+                                    <div key={audit.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', padding: '0.85rem 1rem', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                                      <div style={{ minWidth: 0 }}>
+                                        <span style={{ fontSize: '0.88rem', fontWeight: 700, display: 'block', marginBottom: '0.25rem' }}>{audit.title}</span>
+                                        <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{audit.description}</span>
+                                        {audit.recommendedFix && (
+                                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.5rem' }}>Recommended fix: {audit.recommendedFix}</span>
+                                        )}
+                                      </div>
+                                      <span style={{
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        color: audit.score === 1 ? 'var(--success)' : audit.score === 0.5 ? 'var(--warning)' : 'var(--danger)'
+                                      }}>
+                                        {audit.displayValue}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>No audits available for this category.</p>
+                              )}
                             </div>
-                            <span style={{ 
-                              fontSize: '0.8rem', 
-                              fontWeight: 700, 
-                              color: audit.score === 1 ? 'var(--success)' : audit.score === 0.5 ? 'var(--warning)' : 'var(--danger)'
-                            }}>
-                              {audit.displayValue}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
