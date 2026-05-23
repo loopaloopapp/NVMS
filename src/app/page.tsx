@@ -634,6 +634,19 @@ Sitemap: https://${domain}/sitemap.xml`;
                 onChange={(e) => setUrlInput(e.target.value)}
                 disabled={isScanning}
               />
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem', alignItems: 'center' }}>
+                <label htmlFor="pages-limit" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', minWidth: '160px' }}>Maximum Pages to Scan</label>
+                <input
+                  id="pages-limit"
+                  type="number"
+                  className="input"
+                  min={1}
+                  value={options.limit}
+                  onChange={(e) => setOptions({...options, limit: Number(e.target.value || 1)})}
+                  disabled={isScanning}
+                  style={{ width: '120px' }}
+                />
+              </div>
             </div>
             <button 
               className="btn" 
